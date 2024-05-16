@@ -29,58 +29,19 @@
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
    </property>
   </widget>
-  <widget class="Line" name="line">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>180</y>
-     <width>851</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_3">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>240</y>
-     <width>121</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Stations berechnen</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="pb_get_all_stations">
-   <property name="geometry">
-    <rect>
-     <x>60</x>
-     <y>270</y>
-     <width>121</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>get all stations</string>
-   </property>
-  </widget>
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>841</width>
-     <height>151</height>
+     <width>871</width>
+     <height>181</height>
     </rect>
    </property>
    <property name="title">
     <string>Vorbereitung</string>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>30</x>
@@ -106,8 +67,17 @@
      </item>
      <item>
       <widget class="QRadioButton" name="rb_otp_manually_started_8080">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
        <property name="text">
-        <string>OTP manuell starten mit port number 8080</string>
+        <string>OTP manuell starten mit standard port number 8080</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -121,9 +91,65 @@
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="le_port_number"/>
+        <widget class="QLineEdit" name="le_port_number">
+         <property name="maxLength">
+          <number>4</number>
+         </property>
+        </widget>
        </item>
       </layout>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QPushButton" name="pb_start_check_OTP">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>150</y>
+      <width>241</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>start OTP/ check if OTP is running</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>220</y>
+     <width>581</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Stations layer erzeugen</string>
+   </property>
+   <widget class="QWidget" name="">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>30</y>
+      <width>551</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="pb_get_stations_from_otp">
+       <property name="text">
+        <string>get all stations from otp and create layer</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pb_get_stops_from_otp">
+       <property name="text">
+        <string>get all stops from otp and create layer</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </widget>

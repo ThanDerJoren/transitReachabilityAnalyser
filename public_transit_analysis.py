@@ -25,8 +25,12 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import QgsProject
+
+# personal imports
 from console import console
 from .stop import Stop
+import sys
+import requests, json
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -182,28 +186,58 @@ class PublicTransitAnalysis:
                 action)
             self.iface.removeToolBarIcon(action)
 
-    def testfunction(self):
-        # hier möchte ich testen wie radio buttons funtionieren und wie ich die GUI mit dem code verknüpfe
-        console.show_console()
-        self.iface.messageBar().pushMessage("connected to testFunction")
+    """
+    My own methods
+    """
+
+    def check_grizzly_server_is_running(self):
         if self.dlg.rb_automatic_otp_start.isChecked():
-            print("1")
-        if self.dlg.rb_otp_manually_started_8080.isChecked():
-            print("2")
-        if self.dlg.rb_otp_manually_started_changed_port.isChecked():
-            print("3")
+            self.iface.messageBar().pushMessage("This is not implemented yet. \nYou have to choose another option")
+        elif self.dlg.rb_otp_manually_started_8080.isChecked():
+            url = "http://localhost:8080/"
+            print(url)
+        elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
+            if self.dlg.le_port_number.text() != "":
+                port_number = self.dlg.le_port_number.text()
+                url = f"http://localhost:{port_number}/"
+                print(f"request url: {url}")
+            else:
+                self.iface.messageBar().pushMessage("You have to enter a port number for OTP")
+        else:
+            self.iface.messageBar().pushMessage("How to start OTP. There has to be at least one option choosen")
+        try:
+            # Get Url
+            get = requests.get(url)
+            # if the request succeeds
+            if get.status_code == 200:
+                return True
+            else:
+                return False
+            # Exception
+        except requests.exceptions.RequestException as e:
+            return False
 
 
+    def not_implemented_yet(self):
+        self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
+    def testfunction(self):
+        print(self.check_grizzly_server_is_running())
+
+
+    """
+    Run is the method, which connects GUI elements to methods and is running, while the plugin is open
+    """
     def run(self):
         """Run method that performs all the real work"""
+        #console.show_console()
         #print("hallo Welt")
         self.iface.messageBar().pushMessage("HAllo Welt")
-        
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
             self.dlg = PublicTransitAnalysisDialog()
+            self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_get_all_stations.clicked.connect(self.testfunction)
 
         # show the dialog
