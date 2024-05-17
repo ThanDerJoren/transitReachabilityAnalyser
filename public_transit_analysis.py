@@ -21,16 +21,19 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication #TODO ist QgsVectorLayer an der richtigen Stelle importiert?
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
-from qgis.core import QgsProject
+from qgis.core import QgsProject, QgsVectorLayer
 
 # personal imports
 from console import console
 from .stop import Stop
+from .station import Station
 import sys
 import requests, json
+import geopandas as gpd
+import pandas as pd
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -215,13 +218,106 @@ class PublicTransitAnalysis:
                 return False
             # Exception
         except requests.exceptions.RequestException as e:
+            self.iface.messageBar().pushMessage("Grizzly server is not running or runs on an different port")
             return False
 
+    def get_request_url(self):
+        if self.dlg.rb_otp_manually_started_8080.isChecked():
+            return "http://localhost:8080/otp/gtfs/v1"
+        elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
+            port_number = self.dlg.le_port_number.text()
+            return f"http://localhost:{port_number}/otp/gtfs/v1"
 
+    def query_all_stops(self):
+        if self.check_grizzly_server_is_running():
+            url = self.get_request_url()
+            queried_stops = requests.post(url, json={"query": "{stops{name, gtfsId, lat, lon, vehicleMode}}"})
+            queried_stops = json.loads(queried_stops.content)
+            queried_stops = queried_stops["data"]["stops"]
+            return queried_stops
+        else:
+            print("stops could not be queried because OTP is not reachable")
+
+    def create_dataframe_with_station_attributes(self, station_collection):
+        name_collection = []
+        average_trip_time_collection = []
+        car_driving_time_collection = []
+        travel_time_ratio_collection = []
+        average_number_of_transfers_collection = []
+        average_walk_distance_of_trip_collection = []
+        trip_frequency_collection = []
+        for station in station_collection:
+            name_collection.append(station.name)
+            average_trip_time_collection.append(station.average_trip_time)
+            car_driving_time_collection.append(station.car_driving_time)
+            travel_time_ratio_collection.append(station.travel_time_ratio)
+            average_number_of_transfers_collection.append(station.average_number_of_transfers)
+            average_walk_distance_of_trip_collection.append(station.average_walk_distance_of_trip)
+            trip_frequency_collection.append(station.trip_frequency)
+        df = pd.DataFrame(
+            {
+                "Name": name_collection,
+                "travel_time_ratio": travel_time_ratio_collection,
+                "average_number_of_transfers": average_number_of_transfers_collection,
+                "trip_frequency_collection": trip_frequency_collection,
+                "average_trip_time": average_trip_time_collection,
+                "car_driving_time": car_driving_time_collection,
+                "average_walk_distance_of_trip": average_walk_distance_of_trip_collection
+            }
+        )
+        return df
+
+    def create_stop_objects(self, queried_stops):
+        stop_objects = []
+        for data in queried_stops:
+            stop = Stop(data["name"], data["gtfsId"], data["lat"], data["lon"], data["vehicleMode"])
+            stop_objects.append(stop)
+        return stop_objects.copy()
+
+    def create_stations(self, stop_collection):
+        station_collection = []
+        current_stop_name = stop_collection[0].name
+        related_stops = [stop_collection[0]]
+        for element in stop_collection[1:]:
+            if element.name == current_stop_name:
+                related_stops.append(element)
+            else:
+                station = Station(current_stop_name, related_stops.copy())
+                station_collection.append(station)
+                current_stop_name = element.name
+                related_stops.clear()
+                related_stops.append(element)
+        return station_collection
+
+    def export_stations_as_geopackage(self, station_collection, layer_name):
+        mean_lat_collection = []
+        mean_lon_collection = []
+        for station in station_collection:
+            mean_lat_collection.append(station.mean_lat)
+            mean_lon_collection.append(station.mean_lon)
+        station_attributes = self.create_dataframe_with_station_attributes(station_collection)
+        gdf = gpd.GeoDataFrame(station_attributes,
+                               geometry=gpd.points_from_xy(mean_lon_collection, mean_lat_collection), crs="EPSG:4326")
+        gdf.to_file(layer_name, driver='GPKG', layer=layer_name)
+        layer = QgsVectorLayer(layer_name, layer_name, "ogr") #TODO funktioniert das so?
+        QgsProject.instance().addMapLayer(layer)
+
+
+    def stations_from_otp_to_gpkg(self):
+        self.iface.messageBar().pushMessage("The button was pressed, your request is working")
+        stops_as_dict = {}
+        all_stops = []
+        all_stations = []
+        stops_as_dict = self.query_all_stops()
+        all_stops = self.create_stop_objects(stops_as_dict)
+        all_stations = self.create_stations(all_stops)
+        self.export_stations_as_geopackage(all_stations, "all_stations_without_itineraries")
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
     def testfunction(self):
         print(self.check_grizzly_server_is_running())
+
+
 
 
     """
@@ -238,7 +334,8 @@ class PublicTransitAnalysis:
             self.first_start = False
             self.dlg = PublicTransitAnalysisDialog()
             self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
-            self.dlg.pb_get_all_stations.clicked.connect(self.testfunction)
+            self.dlg.pb_get_stops_from_otp.clicked.connect(self.not_implemented_yet)
+            self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
 
         # show the dialog
         self.dlg.show()
