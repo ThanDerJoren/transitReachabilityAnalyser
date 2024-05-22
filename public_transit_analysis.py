@@ -246,14 +246,25 @@ class PublicTransitAnalysis:
         average_number_of_transfers_collection = []
         average_walk_distance_of_trip_collection = []
         trip_frequency_collection = []
+        itineraries_collection = []
+        max_distance_station_to_stop_collection = []
         for station in station_collection:
+            itineraries_data = ""
             name_collection.append(station.name)
-            average_trip_time_collection.append(station.average_trip_time)
+            if station.average_trip_time is not None:
+                average_trip_time_collection.append(station.average_trip_time)
+            else:
+                average_trip_time_collection.append(-1)
             car_driving_time_collection.append(station.car_driving_time)
             travel_time_ratio_collection.append(station.travel_time_ratio)
             average_number_of_transfers_collection.append(station.average_number_of_transfers)
             average_walk_distance_of_trip_collection.append(station.average_walk_distance_of_trip)
             trip_frequency_collection.append(station.trip_frequency)
+            for itinerary in station.selected_itineraries:
+                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
+                itineraries_data = itineraries_data + data
+            itineraries_collection.append(itineraries_data)
+            max_distance_station_to_stop_collection.append(station.max_distance_station_to_stop)
         df = pd.DataFrame(
             {
                 "Name": name_collection,
@@ -262,7 +273,9 @@ class PublicTransitAnalysis:
                 "trip_frequency_collection": trip_frequency_collection,
                 "average_trip_time": average_trip_time_collection,
                 "car_driving_time": car_driving_time_collection,
-                "average_walk_distance_of_trip": average_walk_distance_of_trip_collection
+                "average_walk_distance_of_trip": average_walk_distance_of_trip_collection,
+                "itinerary_overview": itineraries_collection,
+                "max_distance_station_to_stop": max_distance_station_to_stop_collection
             }
         )
         return df
@@ -312,6 +325,12 @@ class PublicTransitAnalysis:
         all_stops = self.create_stop_objects(stops_as_dict)
         all_stations = self.create_stations(all_stops)
         self.export_stations_as_geopackage(all_stations, "all_stations_without_itineraries")
+
+    def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
+        if start_or_end_station == "start":
+            self.not_implemented_yet()
+        elif start_or_end_station =="end":
+            self.not_implemented_yet()
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
     def testfunction(self):
@@ -336,6 +355,8 @@ class PublicTransitAnalysis:
             self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
+            self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
+            self.dlg.pb_all_stations_to_end.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
 
         # show the dialog
         self.dlg.show()
