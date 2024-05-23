@@ -2,16 +2,16 @@ import json
 import datetime
 import requests
 
-from pyrosm import OSM
-import osmnx as ox
-import geopandas as gpd
-import networkx as nx
+#from pyrosm import OSM
+#import osmnx as ox
+#import geopandas as gpd
+#import networkx as nx
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
-from stop import Stop # used in relatedStops
-from itinerary import Itinerary
-import geopy.distance
+from .stop import Stop # used in relatedStops
+from .itinerary import Itinerary
+import geopy.distance # TODO find an alternative, which is already installed in qgis python
 class Station:
 
 
@@ -44,7 +44,7 @@ class Station:
         position = {"lat": self.mean_lat, "lon": self.mean_lon}
         return position
 
-    def query_and_create_transit_itineraries(self, date: str, time: str, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+    def query_and_create_transit_itineraries(self, date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         date = f"\"{date}\""
         time = f"\"{time}\""
 
@@ -65,7 +65,7 @@ class Station:
                 transportModes: [{{mode: TRANSIT}}, {{mode: WALK}}]
                 numItineraries: 10
                 walkReluctance: 3.0
-                searchWindow: 3600
+                searchWindow: {search_window}
                 ){{
                     itineraries{{
                         startTime,
@@ -184,13 +184,19 @@ class Station:
             print(f"car Itinerary:",itinerary["duration"], f"station: {self.name}")
             self.car_driving_time = itinerary["duration"]/60 # seconds in minutes
 
-    def filter_itineraries_with_permissible_catchment_area(self, start_or_end_station, catchment_area = 300):
+    def filter_itineraries_with_permissible_catchment_area(self, start_or_end_station, catchment_area):
         if start_or_end_station == "start":
             for itinerary in self.queried_itineraries:
+                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.distance_to_start_station <= catchment_area:
+                    #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
+                    self.itineraries_with_permissible_catchment_area.append(itinerary)
                 if itinerary.distance_to_start_station <= catchment_area and self.name == itinerary.end_station: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
         elif start_or_end_station == "end":
             for itinerary in self.queried_itineraries:
+                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.distance_to_start_station <= catchment_area:
+                    #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
+                    self.itineraries_with_permissible_catchment_area.append(itinerary)
                 if itinerary.distance_from_end_station <= catchment_area and self.name == itinerary.start_station:
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
         else:
@@ -235,13 +241,6 @@ class Station:
             distance = self.query_walk_distance(end = end)
             if distance is None: #backup, if OTP dosen't calculate a walk distane
                 distance = self.calculate_linear_distance(end = end)
-            print(self.name, distance)
             if distance > max_distance:
                 max_distance = distance
         self.max_distance_station_to_stop = max_distance
-
-    def calculate_isochrone(self, G, radius = 300):
-        center_node = ox.nearest_nodes(G, self.mean_lon, self.mean_lat) #TODO müsste ersetzt werden, wenn kein conda
-        subgraph = nx.ego_graph(G,center_node, radius = radius, distance = "length")
-        node_points = [Point((data["x"], data["y"])) for node, data in subgraph.nodes(data=True)]
-        self.isochrone = gpd.GeoSeries(node_points).unary_union.convex_hull

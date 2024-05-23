@@ -35,6 +35,7 @@ import requests, json
 import geopandas as gpd
 import pandas as pd
 
+
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
@@ -302,6 +303,42 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
         return station_collection
 
+    def create_itineraries_from_start_to_each_station(self, station_collection, date: str, time: str, search_window: int, catchment_area, start: dict):
+        possible_start_stations = []
+        possible_start_coordinates = []
+        # first try: find from the start an itinerary to every station
+        for item_index, station in enumerate(station_collection):
+            station.query_and_create_transit_itineraries(date, time, search_window, start=start)
+            station.filter_itineraries_with_permissible_catchment_area("start", catchment_area)
+            station.filter_shortest_itinerary()
+            for itinerary in station.itineraries_with_permissible_catchment_area:
+                if possible_start_stations.count(itinerary.start_station) == 0:
+                    possible_start_stations.append(itinerary.start_station)
+            print(f"{item_index}, {station.name}, shortest itinerary calculated; ")
+        while "" in possible_start_stations: possible_start_stations.remove("")  # because of the declaration of stat_station, there can be empty strings in possible_start_station
+        print("possible start stations: ", possible_start_stations)
+        # get the coordinates of the possible start stations and find max distance
+        max_distance = 0.0
+        for station in station_collection:
+            for start_station in possible_start_stations:
+                if station.name == start_station:
+                    start_coordinates = {"lat": station.mean_lat, "lon": station.mean_lon}
+                    possible_start_coordinates.append(start_coordinates)
+                    station.calculate_max_distance_station_to_stop()
+                    if station.max_distance_station_to_stop > max_distance:
+                        max_distance = station.max_distance_station_to_stop
+        # second try: find an itinerary explicit from the possible_start_stations to all stations, which weren't reached in the first try
+        # TODO is this even necessery? or is this not find any additional itinerary?
+        for station in station_collection:
+            if len(station.itineraries_with_permissible_catchment_area) == 0:
+                station.queried_itineraries.clear()
+                for start_coordinate in possible_start_coordinates:
+                    station.query_and_create_transit_itineraries(date, time, search_window, start=start_coordinate)
+                station.filter_itineraries_with_permissible_catchment_area("start", max_distance)
+                station.filter_shortest_itinerary()
+        for station in station_collection:
+            station.calculate_travel_time_ratio(start=start)
+
     def export_stations_as_geopackage(self, station_collection, layer_name):
         mean_lat_collection = []
         mean_lon_collection = []
@@ -316,21 +353,50 @@ class PublicTransitAnalysis:
         QgsProject.instance().addMapLayer(layer)
 
 
-    def stations_from_otp_to_gpkg(self):
+    def stations_from_otp_to_gpkg(self, export_to_gpkg=True):
         self.iface.messageBar().pushMessage("The button was pressed, your request is working")
-        stops_as_dict = {}
-        all_stops = []
-        all_stations = []
         stops_as_dict = self.query_all_stops()
         all_stops = self.create_stop_objects(stops_as_dict)
         all_stations = self.create_stations(all_stops)
-        self.export_stations_as_geopackage(all_stations, "all_stations_without_itineraries")
+        if export_to_gpkg:
+            self.export_stations_as_geopackage(all_stations, "all_stations_without_itineraries")
+        else:
+            return all_stations
 
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
+        all_stations = self.stations_from_otp_to_gpkg(export_to_gpkg=False)
+        layer_name = self.dlg.le_layer_name.text() #TODO co ntrole, that the name is usable as filename
+        date = self.dlg.le_date.text() #TODO add if statement, to check the right syntaxt
+        time = self.dlg.le_time.text() #TODO add if statement, to check the right syntaxt
+        if self.dlg.le_searchWindow.text().isdecimal():
+            search_window = int(self.dlg.le_searchWindow.text()) #set default to 3600 seconds
+        else:
+            self.iface.messageBar().pushMessage("The search window text field has to contain only numbers")
+            return
+        try:
+            catchment_area = float(self.dlg.le_catchment_area.text())
+        except ValueError:
+            self.iface.messageBar().pushMessage("The catchment area text field has to contain only numbers")
+            return
+        try:
+            lat = float(self.dlg.le_lat_of_start_end.text())
+        except ValueError:
+            self.iface.messageBar().pushMessage("The lat text field has to contain only numbers")
+            return
+        try:
+            lon = float(self.dlg.le_lon_of_start_end.text())
+        except ValueError:
+            self.iface.messageBar().pushMessage("The lon text field has to contain only numbers")
+            return
         if start_or_end_station == "start":
+            start = {"lat": lat, "lon":  lon}
+            self.create_itineraries_from_start_to_each_station(all_stations, date, time, search_window, catchment_area, start)
+            self.export_stations_as_geopackage(all_stations, layer_name)
+
+        elif start_or_end_station == "end":
+            end = {"lat": lat, "lon":  lon}
             self.not_implemented_yet()
-        elif start_or_end_station =="end":
-            self.not_implemented_yet()
+
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
     def testfunction(self):
@@ -356,7 +422,7 @@ class PublicTransitAnalysis:
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
-            self.dlg.pb_all_stations_to_end.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
+            self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
 
         # show the dialog
         self.dlg.show()
