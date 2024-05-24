@@ -339,7 +339,7 @@ class PublicTransitAnalysis:
         for station in station_collection:
             station.calculate_travel_time_ratio(start=start)
 
-    def export_stations_as_geopackage(self, station_collection, layer_name):
+    def export_stations_as_geopackage(self, station_collection, filepath, layer_name):
         mean_lat_collection = []
         mean_lon_collection = []
         for station in station_collection:
@@ -348,8 +348,8 @@ class PublicTransitAnalysis:
         station_attributes = self.create_dataframe_with_station_attributes(station_collection)
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(mean_lon_collection, mean_lat_collection), crs="EPSG:4326")
-        gdf.to_file(layer_name, driver='GPKG', layer=layer_name)
-        layer = QgsVectorLayer(layer_name, layer_name, "ogr") #TODO funktioniert das so?
+        gdf.to_file(filepath, driver='GPKG', layer=layer_name)
+        layer = QgsVectorLayer(filepath, layer_name, "ogr") #TODO funktioniert das so?
         QgsProject.instance().addMapLayer(layer)
 
 
@@ -359,7 +359,8 @@ class PublicTransitAnalysis:
         all_stops = self.create_stop_objects(stops_as_dict)
         all_stations = self.create_stations(all_stops)
         if export_to_gpkg:
-            self.export_stations_as_geopackage(all_stations, "all_stations_without_itineraries")
+            # TODO add filepath elements in GUI
+            self.export_stations_as_geopackage(all_stations, "all_stations_without_itineraries", "all_stations_without_itineraries")
         else:
             return all_stations
 
@@ -368,6 +369,11 @@ class PublicTransitAnalysis:
         layer_name = self.dlg.le_layer_name.text() #TODO co ntrole, that the name is usable as filename
         date = self.dlg.le_date.text() #TODO add if statement, to check the right syntaxt
         time = self.dlg.le_time.text() #TODO add if statement, to check the right syntaxt
+        if self.dlg.le_filepath_itineraries.text() is not None:
+            filepath = self.dlg.le_filepath_itineraries.text()
+        else:
+            self.iface.messageBar().pushMessage("The filepath has to be selected first")
+            return
         if self.dlg.le_searchWindow.text().isdecimal():
             search_window = int(self.dlg.le_searchWindow.text()) #set default to 3600 seconds
         else:
@@ -390,12 +396,21 @@ class PublicTransitAnalysis:
             return
         if start_or_end_station == "start":
             start = {"lat": lat, "lon":  lon}
-            self.create_itineraries_from_start_to_each_station(all_stations, date, time, search_window, catchment_area, start)
-            self.export_stations_as_geopackage(all_stations, layer_name)
+            self.create_itineraries_from_start_to_each_station(all_stations[0:20], date, time, search_window, catchment_area, start)
+            self.export_stations_as_geopackage(all_stations[0:20], filepath, layer_name)
 
         elif start_or_end_station == "end":
             end = {"lat": lat, "lon":  lon}
             self.not_implemented_yet()
+
+    def select_output_file(self, current_line_edit): #
+        filename, _filter = QFileDialog.getSaveFileName(
+            self.dlg, "Filepath ", "", '*.gpkg')
+        if current_line_edit == "itineraries":
+                self.dlg.le_filepath_itineraries.setText(filename)
+
+    def develop_default_symbology(self):
+        pass
 
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
@@ -420,9 +435,17 @@ class PublicTransitAnalysis:
             self.dlg = PublicTransitAnalysisDialog()
             self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.not_implemented_yet)
+            self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
             self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
+
+        # Fetch the currently loaded layers
+        layers = QgsProject.instance().layerTreeRoot().children() #Attention this can't go into a layer group
+        # Clear the contents of the comboBox from previous runs
+        self.dlg.cb_layer_symbology.clear()
+        # Populate the comboBox with names of all the loaded layers
+        self.dlg.cb_layer_symbology.addItems([layer.name() for layer in layers])
 
         # show the dialog
         self.dlg.show()

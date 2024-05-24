@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>905</width>
-    <height>792</height>
+    <width>999</width>
+    <height>1078</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QDialogButtonBox" name="button_box">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>710</y>
+     <x>540</x>
+     <y>990</y>
      <width>341</width>
      <height>32</height>
     </rect>
@@ -172,20 +172,20 @@
       <x>30</x>
       <y>30</y>
       <width>538</width>
-      <height>228</height>
+      <height>246</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <layout class="QFormLayout" name="formLayout">
-       <item row="1" column="0">
+       <item row="2" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
           <string>Quelle/ Ziel</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
+       <item row="2" column="1">
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
           <widget class="QLabel" name="label_7">
@@ -217,75 +217,96 @@
          </item>
         </layout>
        </item>
-       <item row="2" column="0">
+       <item row="3" column="0">
         <widget class="QLabel" name="label_5">
          <property name="text">
           <string>Abfahrtsdatum</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
+       <item row="3" column="1">
         <widget class="QLineEdit" name="le_date">
          <property name="text">
           <string>2024-04-18</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>Abfahrszeit</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="4" column="1">
         <widget class="QLineEdit" name="le_time">
          <property name="text">
           <string>11:30</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QLabel" name="label_4">
          <property name="text">
           <string>Zeitfenster</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="5" column="1">
         <widget class="QLineEdit" name="le_searchWindow">
          <property name="text">
           <string>3600</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="6" column="0">
         <widget class="QLabel" name="label_6">
          <property name="text">
           <string>Einzugsradius</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="6" column="1">
         <widget class="QLineEdit" name="le_catchment_area">
          <property name="text">
           <string>300</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="0">
+       <item row="1" column="0">
         <widget class="QLabel" name="label_9">
          <property name="text">
           <string>Layername</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
+       <item row="1" column="1">
         <widget class="QLineEdit" name="le_layer_name">
          <property name="text">
           <string>Andreeplatz2_300m</string>
          </property>
         </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>Dateipfad</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QLineEdit" name="le_filepath_itineraries"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_open_explorer_itineraries">
+           <property name="text">
+            <string>...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
@@ -310,7 +331,94 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QgsDateTimeEdit" name="mDateTimeEdit">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>960</y>
+     <width>171</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QgsCollapsibleGroupBox" name="mGroupBox">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>950</y>
+     <width>300</width>
+     <height>100</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>collapsible group box</string>
+   </property>
+  </widget>
+  <widget class="QgsDoubleSpinBox" name="mQgsDoubleSpinBox">
+   <property name="geometry">
+    <rect>
+     <x>420</x>
+     <y>1010</y>
+     <width>91</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_4">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>650</y>
+     <width>741</width>
+     <height>181</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Symbolisierung festlegen</string>
+   </property>
+   <widget class="QLabel" name="label_11">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>40</y>
+      <width>141</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Layer auswählen</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="cb_layer_symbology">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>40</y>
+      <width>251</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsCollapsibleGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>qgscollapsiblegroupbox.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsDateTimeEdit</class>
+   <extends>QDateTimeEdit</extends>
+   <header>qgsdatetimeedit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsDoubleSpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>qgsdoublespinbox.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
