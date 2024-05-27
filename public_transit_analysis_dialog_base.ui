@@ -367,8 +367,8 @@
   <widget class="QGroupBox" name="groupBox_4">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>650</y>
+     <x>20</x>
+     <y>660</y>
      <width>741</width>
      <height>181</height>
     </rect>
@@ -397,6 +397,19 @@
       <width>251</width>
       <height>22</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pb_set_symbology">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>100</y>
+      <width>191</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Erstelle Symbolisierung</string>
     </property>
    </widget>
   </widget>

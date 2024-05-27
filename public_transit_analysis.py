@@ -21,6 +21,8 @@
  *                                                                         *
  ***************************************************************************/
 """
+import math
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication #TODO ist QgsVectorLayer an der richtigen Stelle importiert?
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
@@ -34,6 +36,76 @@ import sys
 import requests, json
 import geopandas as gpd
 import pandas as pd
+from colour import Color # for colour gradients
+
+# downloaded for symbology, don't know which packages I really need: https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/vector.html#appearance-symbology-of-vector-layers
+from qgis.core import (
+
+  QgsApplication,
+
+  QgsDataSourceUri,
+
+  QgsCategorizedSymbolRenderer,
+
+  QgsClassificationRange,
+
+  QgsPointXY,
+
+  QgsProject,
+
+  QgsExpression,
+
+  QgsField,
+
+  QgsFields,
+
+  QgsFeature,
+
+  QgsFeatureRequest,
+
+  QgsFeatureRenderer,
+
+  QgsGeometry,
+
+  QgsGraduatedSymbolRenderer,
+
+  QgsMarkerSymbol,
+
+  QgsMessageLog,
+
+  QgsRectangle,
+
+  QgsRendererCategory,
+
+  QgsRendererRange,
+
+  QgsSymbol,
+
+  QgsVectorDataProvider,
+
+  QgsVectorLayer,
+
+  QgsVectorFileWriter,
+
+  QgsWkbTypes,
+
+  QgsSpatialIndex,
+
+  QgsVectorLayerUtils
+
+)
+
+
+from qgis.core.additions.edit import edit
+
+
+from qgis.PyQt.QtGui import (
+
+    QColor,
+
+)
+# This is needed to create own graduated symbol renderer
+from qgis.PyQt import QtGui
 
 
 # Initialize Qt resources from file resources.py
@@ -410,7 +482,66 @@ class PublicTransitAnalysis:
                 self.dlg.le_filepath_itineraries.setText(filename)
 
     def develop_default_symbology(self):
-        pass
+        # TODO check if the selected layer is an QgsVectorLayer
+        layer_collection = QgsProject.instance().layerTreeRoot().children()
+        layer_index = self.dlg.cb_layer_symbology.currentIndex()
+        layer = layer_collection[layer_index].layer()
+
+        target_field = "average_trip_time"
+
+        # colour gradient green to red
+        data_collection = []
+        features = layer.getFeatures()
+        for row in features:
+            data_collection.append(row[target_field])
+        data_collection.sort(reverse=True)
+        interval_amount = math.ceil(data_collection[0] / 5)
+        lime = Color("lime") #‘lime’ color is full green
+        red = Color("red")
+        colour_gradient = list(lime.range_to(red,interval_amount))
+        print(colour_gradient)
+        for color in colour_gradient:
+            print(color.hex_l)
+        print(f"intervalAmout: {interval_amount}")
+        print(f"colour_gradient: {len(colour_gradient)}")
+
+        # create own graduated symbol renderer
+        range_list = []
+        lower_limit = 0.0
+        upper_limit = 5.0
+        for color in colour_gradient:
+            print(f"lower_limit: {lower_limit}")
+            print(f"upper_limit: {upper_limit}\n")
+            label = f"{lower_limit} - {upper_limit} min."
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color.hex_l))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+            lower_limit += 5.0
+            upper_limit += 5.0
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.triggerRepaint()
+
+
+
+        # renderer = layer.renderer()
+        # print("Type:", renderer.type())
+        # renderer = QgsGraduatedSymbolRenderer()
+        # print(renderer.type())
+        # layer.setRenderer(renderer)
+
+
+
+        # fieldnames = [field.name() for field in layer.fields()]
+        # print(fieldnames)
+        # features = layer.getFeatures()
+        # for f in features: # heir wird zeilenweise durch iteriert, nicht spaltenweise
+        #     print(f["average_trip_time"])
 
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
@@ -439,6 +570,7 @@ class PublicTransitAnalysis:
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
             self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
+            self.dlg.pb_set_symbology.clicked.connect(self.develop_default_symbology)
 
         # Fetch the currently loaded layers
         layers = QgsProject.instance().layerTreeRoot().children() #Attention this can't go into a layer group
