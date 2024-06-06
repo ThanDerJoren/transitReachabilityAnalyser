@@ -498,16 +498,21 @@ class PublicTransitAnalysis:
             data_collection.append(row[target_field])
         data_collection.sort(reverse=True)
         interval_amount = math.ceil(data_collection[0] / interval_size)
-        lime = Color("lime") #‘lime’ color is full green
-        red = Color("red")
-        purple = Color("purple")
-        blue = Color("blue")
-        colour_gradient = list(blue.range_to(red,interval_amount))
-        print(colour_gradient)
-        for color in colour_gradient:
-            print(color.hex_l)
-        print(f"intervalAmout: {interval_amount}")
-        print(f"colour_gradient: {len(colour_gradient)}")
+
+
+        colour_progression = ['#0000FF', '#00FF00', "#FFFF00","#FFA500",  '#800080'] #red: '#FF0000',
+        colour_gradient = self.create_gradient(colour_progression, interval_amount)
+
+        # lime = Color("lime") #‘lime’ color is full green
+        # red = Color("red")
+        # purple = Color("purple")
+        # blue = Color("blue")
+        # colour_gradient = list(blue.range_to(red,interval_amount))
+        # print(colour_gradient)
+        # for color in colour_gradient:
+        #     print(color.hex_l)
+        # print(f"intervalAmout: {interval_amount}")
+        # print(f"colour_gradient: {len(colour_gradient)}")
 
         # create own graduated symbol renderer
         range_list = []
@@ -518,7 +523,8 @@ class PublicTransitAnalysis:
             print(f"upper_limit: {upper_limit}\n")
             label = f"{lower_limit} - {upper_limit} min."
             symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-            symbol.setColor(QtGui.QColor(color.hex_l))
+            symbol.setColor(QtGui.QColor(color))
+            #symbol.setColor(QtGui.QColor(color.hex_l))
             # current_opacity = (interval_size-index)/interval_size
             #symbol.setOpacity(opacity/(index+1))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
@@ -548,6 +554,65 @@ class PublicTransitAnalysis:
         # features = layer.getFeatures()
         # for f in features: # heir wird zeilenweise durch iteriert, nicht spaltenweise
         #     print(f["average_trip_time"])
+
+    """
+    ChatGPT Code:
+    Request: "Python code: Farbverlauf in beliebig vielen Intervallen als list mit Hex code Farbverlauf: Blau, grün, gelb, rot, Lila"
+    """
+
+    def hex_to_rgb(self, hex):
+        """Convert hex color to RGB tuple."""
+        hex = hex.lstrip('#')
+        return tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
+
+    def rgb_to_hex(self, rgb):
+        """Convert RGB tuple to hex color."""
+        return '#{:02x}{:02x}{:02x}'.format(*rgb)
+
+    def interpolate_color(self, c1, c2, t, gamma):
+        """
+        Interpolate between two RGB colors with a given ratio t using a gamma adjustment.
+        t_adjusted = t**gamma:
+        The interpolation ratio t is adjusted using the gamma value to achieve a curved interpolation.
+        By raising t to the power of gamma, transitions between colors are either sharpened or softened
+        depending on the value of gamma.
+        """
+
+        t_adjusted = t ** gamma
+        return tuple(int(c1[i] + (c2[i] - c1[i]) * t_adjusted) for i in range(3))
+
+    def create_gradient(self, colors, n_intervals, gamma=1):
+        """
+        Create a gradient with given list of colors and number of intervals using a gamma adjustment.
+
+        Args:
+        colors (list): List of color hex codes representing the gradient stops.
+        n_intervals (int): Number of intervals in the gradient.
+        gamma: This parameter controls the interpolation curve. By using a value greater than 1,
+        you enhance the differences between the colors, making the interpolation non-linear.
+        Essentially, gamma dictates the "intensity" of the transition between the colors.
+        For instance, a gamma value of 2.2 will make the transitions more pronounced.
+
+        Returns:
+        list: List of hex colors representing the gradient.
+        """
+        gradient = []
+        rgb_colors = [self. hex_to_rgb(color) for color in colors]
+        steps_per_segment = n_intervals // (len(colors) - 1)
+
+        for i in range(len(rgb_colors) - 1):
+            for j in range(steps_per_segment):
+                t = j / steps_per_segment
+                color = self. interpolate_color(rgb_colors[i], rgb_colors[i + 1], t, gamma)
+                gradient.append(self. rgb_to_hex(color))
+
+        # Append the last color.
+        gradient.append(colors[-1])
+
+        return gradient
+    """
+    end of ChatGPT code
+    """
 
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
