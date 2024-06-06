@@ -489,16 +489,20 @@ class PublicTransitAnalysis:
 
         target_field = "average_trip_time"
 
-        # colour gradient green to red
+        # colour gradient
+        opacity = 1
+        interval_size = 5
         data_collection = []
         features = layer.getFeatures()
         for row in features:
             data_collection.append(row[target_field])
         data_collection.sort(reverse=True)
-        interval_amount = math.ceil(data_collection[0] / 5)
+        interval_amount = math.ceil(data_collection[0] / interval_size)
         lime = Color("lime") #‘lime’ color is full green
         red = Color("red")
-        colour_gradient = list(lime.range_to(red,interval_amount))
+        purple = Color("purple")
+        blue = Color("blue")
+        colour_gradient = list(blue.range_to(red,interval_amount))
         print(colour_gradient)
         for color in colour_gradient:
             print(color.hex_l)
@@ -508,17 +512,19 @@ class PublicTransitAnalysis:
         # create own graduated symbol renderer
         range_list = []
         lower_limit = 0.0
-        upper_limit = 5.0
-        for color in colour_gradient:
+        upper_limit = interval_size
+        for index, color in enumerate(colour_gradient):
             print(f"lower_limit: {lower_limit}")
             print(f"upper_limit: {upper_limit}\n")
             label = f"{lower_limit} - {upper_limit} min."
             symbol = QgsSymbol.defaultSymbol(layer.geometryType())
             symbol.setColor(QtGui.QColor(color.hex_l))
+            # current_opacity = (interval_size-index)/interval_size
+            #symbol.setOpacity(opacity/(index+1))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-            lower_limit += 5.0
-            upper_limit += 5.0
+            lower_limit += interval_size
+            upper_limit += interval_size
         trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
         classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
         trip_time_renderer.setClassificationMethod(classification_method)
