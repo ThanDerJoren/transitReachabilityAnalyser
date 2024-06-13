@@ -32,6 +32,7 @@ from qgis.core import QgsProject, QgsVectorLayer
 from console import console
 from .stop import Stop
 from .station import Station
+from .request import Request
 import sys
 import requests, json
 import geopandas as gpd
@@ -321,6 +322,9 @@ class PublicTransitAnalysis:
         trip_frequency_collection = []
         itineraries_collection = []
         max_distance_station_to_stop_collection = []
+
+
+
         for station in station_collection:
             itineraries_data = ""
             name_collection.append(station.name)
@@ -329,7 +333,10 @@ class PublicTransitAnalysis:
             else:
                 average_trip_time_collection.append(-1)
             car_driving_time_collection.append(station.car_driving_time)
-            travel_time_ratio_collection.append(station.travel_time_ratio)
+            if station.travel_time_ratio is not None:
+                travel_time_ratio_collection.append(station.travel_time_ratio)
+            else:
+                travel_time_ratio_collection.append(-1)
             average_number_of_transfers_collection.append(station.average_number_of_transfers)
             average_walk_distance_of_trip_collection.append(station.average_walk_distance_of_trip)
             trip_frequency_collection.append(station.trip_frequency)
@@ -439,35 +446,22 @@ class PublicTransitAnalysis:
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
         all_stations = self.stations_from_otp_to_gpkg(export_to_gpkg=False)
         layer_name = self.dlg.le_layer_name.text() #TODO co ntrole, that the name is usable as filename
-        date = self.dlg.le_date.text() #TODO add if statement, to check the right syntaxt
-        time = self.dlg.le_time.text() #TODO add if statement, to check the right syntaxt
         if self.dlg.le_filepath_itineraries.text() is not None:
             filepath = self.dlg.le_filepath_itineraries.text()
         else:
             self.iface.messageBar().pushMessage("The filepath has to be selected first")
             return
-        if self.dlg.le_searchWindow.text().isdecimal():
-            search_window = int(self.dlg.le_searchWindow.text()) #set default to 3600 seconds
-        else:
-            self.iface.messageBar().pushMessage("The search window text field has to contain only numbers")
-            return
-        try:
-            catchment_area = float(self.dlg.le_catchment_area.text())
-        except ValueError:
-            self.iface.messageBar().pushMessage("The catchment area text field has to contain only numbers")
-            return
-        try:
-            lat = float(self.dlg.le_lat_of_start_end.text())
-        except ValueError:
-            self.iface.messageBar().pushMessage("The lat text field has to contain only numbers")
-            return
-        try:
-            lon = float(self.dlg.le_lon_of_start_end.text())
-        except ValueError:
-            self.iface.messageBar().pushMessage("The lon text field has to contain only numbers")
-            return
+
         if start_or_end_station == "start":
-            start = {"lat": lat, "lon":  lon}
+            start = Request(
+                lat=self.dlg.le_lat_of_start_end.text(),
+                lon=self.dlg.le_lon_of_start_end.text(),
+                date=self.dlg.le_date.text(),
+                time=self.dlg.le_time.text(),
+                search_window=self.dlg.le_searchWindow.text(),
+                catchment_area=self.dlg.le_catchment_area.text()
+            )
+            #start = {"lat": lat, "lon":  lon} #TODO next step is to integrate the new object stat in the following methods
             self.create_itineraries_from_start_to_each_station(all_stations[0:20], date, time, search_window, catchment_area, start)
             self.export_stations_as_geopackage(all_stations[0:20], filepath, layer_name)
 
@@ -480,6 +474,110 @@ class PublicTransitAnalysis:
             self.dlg, "Filepath ", "", '*.gpkg')
         if current_line_edit == "itineraries":
                 self.dlg.le_filepath_itineraries.setText(filename)
+
+    def set_default_symbology(self):
+        layer_collection = QgsProject.instance().layerTreeRoot().children()
+        layer_index = self.dlg.cb_layer_symbology.currentIndex()
+        layer = layer_collection[layer_index].layer()
+
+        if self.dlg.rb_travel_time_transit.isChecked():
+            self.travel_time_symbology(layer)
+        elif self.dlg.rb_travel_time_ratio_transit_to_car.isChecked():
+            self.travel_time_ratio_symbology(layer)
+
+    def travel_time_symbology(self, layer):
+        target_field = "average_trip_time"
+        interval_size = 5
+        data_collection = []
+        features = layer.getFeatures()
+        for row in features:
+            data_collection.append(row[target_field])
+        data_collection.sort(reverse=True)
+        interval_amount = math.ceil(data_collection[0] / interval_size)
+
+        # create own graduated symbol renderer
+        colour_progression = ['#0000FF', "#013220", "#FFFF00", "#FFA500",
+                              '#800080']  # red: '#FF0000', dark green: #013220
+        colour_gradient = self.create_gradient(colour_progression, interval_amount)
+        range_list = []
+        lower_limit = 0.0
+        upper_limit = interval_size
+        for index, color in enumerate(colour_gradient):
+            print(f"lower_limit: {lower_limit}")
+            print(f"upper_limit: {upper_limit}\n")
+            label = f"{lower_limit} - {upper_limit} min."
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color))
+            # symbol.setColor(QtGui.QColor(color.hex_l))
+            # current_opacity = (interval_size-index)/interval_size
+            # symbol.setOpacity(opacity/(index+1))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+            lower_limit += interval_size
+            upper_limit += interval_size
+
+        #not reachable stations
+        label = "Station not reachable"
+        lower_limit = -1
+        upper_limit = -1
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        black = "#000000"
+        symbol.setColor(QtGui.QColor(black))
+        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+        range_list.append(range)
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.triggerRepaint()
+
+
+    def travel_time_ratio_symbology(self, layer):
+        target_field = "travel_time_ratio"
+
+        darkgreen = "#00b050"
+        green = "#92d050"
+        orange = "#ffc000"
+        lightred = "#ff0000"
+        red = "#c00002"
+        darkred = "#5d0000"
+        colour_gradient = [darkgreen, green, orange, lightred, red, darkred]
+        range_list = []
+        limits = [0.0, 1.0, 1.5, 2.1, 2.8, 3.8, 100.0]
+        for index, color in enumerate(colour_gradient):
+            if index == 5:
+                label = "test" #"\0xE2 "," 3.8"
+            else:
+                label = f"{limits[index]} to <{limits[index+1]}"
+            lower_limit = limits[index]
+            upper_limit = limits[index+1]
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+
+        # not reachable stations
+        label = "Station not reachable"
+        lower_limit = -1
+        upper_limit = -1
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        black = "#000000"
+        symbol.setColor(QtGui.QColor(black))
+        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+        range_list.append(range)
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.triggerRepaint()
+
+
 
     def develop_default_symbology(self):
         # TODO check if the selected layer is an QgsVectorLayer
@@ -500,7 +598,7 @@ class PublicTransitAnalysis:
         interval_amount = math.ceil(data_collection[0] / interval_size)
 
 
-        colour_progression = ['#0000FF', '#00FF00', "#FFFF00","#FFA500",  '#800080'] #red: '#FF0000',
+        colour_progression = ['#0000FF', "#013220", "#FFFF00","#FFA500",  '#800080'] #red: '#FF0000', dark green: #013220
         colour_gradient = self.create_gradient(colour_progression, interval_amount)
 
         # lime = Color("lime") #‘lime’ color is full green
@@ -641,7 +739,7 @@ class PublicTransitAnalysis:
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
             self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
-            self.dlg.pb_set_symbology.clicked.connect(self.develop_default_symbology)
+            self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
 
         # Fetch the currently loaded layers
         layers = QgsProject.instance().layerTreeRoot().children() #Attention this can't go into a layer group

@@ -16,8 +16,8 @@
   <widget class="QDialogButtonBox" name="button_box">
    <property name="geometry">
     <rect>
-     <x>540</x>
-     <y>990</y>
+     <x>530</x>
+     <y>900</y>
      <width>341</width>
      <height>32</height>
     </rect>
@@ -335,7 +335,7 @@
    <property name="geometry">
     <rect>
      <x>400</x>
-     <y>960</y>
+     <y>860</y>
      <width>171</width>
      <height>27</height>
     </rect>
@@ -344,8 +344,8 @@
   <widget class="QgsCollapsibleGroupBox" name="mGroupBox">
    <property name="geometry">
     <rect>
-     <x>50</x>
-     <y>950</y>
+     <x>40</x>
+     <y>860</y>
      <width>300</width>
      <height>100</height>
     </rect>
@@ -357,8 +357,8 @@
   <widget class="QgsDoubleSpinBox" name="mQgsDoubleSpinBox">
    <property name="geometry">
     <rect>
-     <x>420</x>
-     <y>1010</y>
+     <x>410</x>
+     <y>900</y>
      <width>91</width>
      <height>27</height>
     </rect>
@@ -367,8 +367,8 @@
   <widget class="QGroupBox" name="groupBox_4">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>660</y>
+     <x>30</x>
+     <y>650</y>
      <width>741</width>
      <height>181</height>
     </rect>
@@ -376,41 +376,52 @@
    <property name="title">
     <string>Symbolisierung festlegen</string>
    </property>
-   <widget class="QLabel" name="label_11">
+   <widget class="QWidget" name="">
     <property name="geometry">
      <rect>
       <x>50</x>
       <y>40</y>
-      <width>141</width>
-      <height>21</height>
+      <width>239</width>
+      <height>114</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Layer auswählen</string>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="cb_layer_symbology">
-    <property name="geometry">
-     <rect>
-      <x>220</x>
-      <y>40</y>
-      <width>251</width>
-      <height>22</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pb_set_symbology">
-    <property name="geometry">
-     <rect>
-      <x>50</x>
-      <y>100</y>
-      <width>191</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Erstelle Symbolisierung</string>
-    </property>
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_6">
+       <item>
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>Layer auswählen</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cb_layer_symbology"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="rb_travel_time_transit">
+       <property name="text">
+        <string>Reisezeit ÖPNV</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="rb_travel_time_ratio_transit_to_car">
+       <property name="text">
+        <string>Reisezeitverhältnis ÖPNV/MIV</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pb_set_symbology">
+       <property name="text">
+        <string>Erstelle Symbolisierung</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
  </widget>
