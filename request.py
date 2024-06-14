@@ -1,3 +1,5 @@
+from qgis.utils import iface
+
 class Request:
     #TODO how to end the code, if except in try except
     def __init__(self, lat, lon, date, time, search_window, catchment_area, ):
@@ -7,7 +9,7 @@ class Request:
         self.time = time
         self.search_window = search_window
         self.catchment_area = catchment_area
-        self.possible_start_stations = []
+        self.__possible_start_stations = []
 
     @property
     def lat(self):
@@ -47,7 +49,7 @@ class Request:
                 int(date[8:10])<32):
             self.__date = date
         else:
-            self.iface.messageBar().pushMessage("The date has to be given in YYYY-MM-DD")
+            iface.messageBar().pushMessage("The date has to be given in YYYY-MM-DD")
 
     @property
     def time(self):
@@ -84,6 +86,17 @@ class Request:
         except ValueError:
             self.iface.messageBar().pushMessage("The catchment area text field has to contain only numbers")
 
+    def get_possible_start_stations(self):
+        return self.__possible_start_stations
+
+    def add_possible_start_station(self, start_station:str):
+        if self.__possible_start_stations.count(start_station) == 0:
+            self.__possible_start_stations.append(start_station)
+        print(f"possible_start_stations: {self.__possible_start_stations}" )
+
+    def remove_empty_entries_in_possible_start_station(self):
+        while "" in self.__possible_start_stations:
+            self.__possible_start_stations.remove("")  # because of the declaration of stat_station, there can be empty strings in possible_start_station
 
 
 

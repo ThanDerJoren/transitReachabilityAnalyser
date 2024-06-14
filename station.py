@@ -11,6 +11,7 @@ from shapely.geometry import Polygon
 
 from .stop import Stop # used in relatedStops
 from .itinerary import Itinerary
+from .request import Request
 import geopy.distance # TODO find an alternative, which is already installed in qgis python
 class Station:
 
@@ -44,18 +45,20 @@ class Station:
         position = {"lat": self.mean_lat, "lon": self.mean_lon}
         return position
 
-    def query_and_create_transit_itineraries(self, date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
-        date = f"\"{date}\""
-        time = f"\"{time}\""
+    def query_and_create_transit_itineraries(self, poi: Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+        date = f"\"{poi.date}\""
+        time = f"\"{poi.time}\""
 
-        if start is None and end is not None:
-            start = self.get_position()
-        elif start is not None and end is None:
+        if start_or_end_station == "start":
+            start = {"lat": poi.lat, "lon": poi.lon}
             end = self.get_position()
-        elif start is not None and end is not None:
-            print("The current station has to be either start or end.\n This function is not intended to plan a route, which dosen't include the current station")
+        elif start_or_end_station == "end":
+            start = self.get_position()
+            end = {"lat": poi.lat, "lon": poi.lon}
         else:
-            print("It has to be pass one: start or end, otherwise the route will be from 'A to A'")
+            print("the passed value for start_or_end_station has to be either 'start' or 'end' ")
+            return
+
         plan = f"""
             {{plan(
                 date: {date},
@@ -65,7 +68,7 @@ class Station:
                 transportModes: [{{mode: TRANSIT}}, {{mode: WALK}}]
                 numItineraries: 10
                 walkReluctance: 3.0
-                searchWindow: {search_window}
+                searchWindow: {poi.search_window}
                 ){{
                     itineraries{{
                         startTime,
@@ -156,15 +159,17 @@ class Station:
             return itinerary["walkDistance"]
         #return queriedPlan["data"]["plan"]["itineraries"][0]["walkDistance"]
 
-    def query_and_set_car_driving_time(self, start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
-        if start is None and end is not None:
-            start = self.get_position()
-        elif start is not None and end is None:
+    def query_and_set_car_driving_time(self, poi:Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"):#start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+        if start_or_end_station == "start":
+            start = {"lat": poi.lat, "lon": poi.lon}
             end = self.get_position()
-        elif start is not None and end is not None:
-            print("The current station has to be either start or end.\n This function is not intended to plan a route, which dosen't include the current station")
+        elif start_or_end_station == "end":
+            start = self.get_position()
+            end = {"lat": poi.lat, "lon": poi.lon}
         else:
-            print("It has to be pass one: start or end, otherwise the route will be from 'A to A'")
+            print("the passed value for start_or_end_station has to be either 'start' or 'end' ")
+            return
+
         plan = f"""
                     {{plan(
                         from: {{ lat: {start["lat"]}, lon: {start["lon"]}}},
@@ -214,8 +219,8 @@ class Station:
             self.average_walk_distance_of_trip = self.selected_itineraries[0].walk_distance
 
 
-    def calculate_travel_time_ratio(self, start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
-        self.query_and_set_car_driving_time(start = start, end=end, url=url)
+    def calculate_travel_time_ratio(self, poi:Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+        self.query_and_set_car_driving_time(poi, start_or_end_station, url=url)
         if self.average_trip_time is not None and self.car_driving_time is not None:
             self.travel_time_ratio = self.average_trip_time/self.car_driving_time
         else:

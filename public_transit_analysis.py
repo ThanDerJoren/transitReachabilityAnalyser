@@ -312,21 +312,48 @@ class PublicTransitAnalysis:
         else:
             print("stops could not be queried because OTP is not reachable")
 
-    def create_dataframe_with_station_attributes(self, station_collection):
-        name_collection = []
-        average_trip_time_collection = []
-        car_driving_time_collection = []
-        travel_time_ratio_collection = []
-        average_number_of_transfers_collection = []
-        average_walk_distance_of_trip_collection = []
-        trip_frequency_collection = []
-        itineraries_collection = []
-        max_distance_station_to_stop_collection = []
+    def create_dataframe_with_station_attributes(self, station_collection, poi:Request = None):
+        """
+        Codes of the negative numbers:
+        -1: there is no Itinerary to/from this station -> not reachable
+        -2: This is the point to which/ from which every itinerary goes
+
+        """
+
+        # The first row of the data frame will be the point to which/ from which every itinerary goes
+        name_collection = ["Point of Interest"]
+        average_trip_time_collection = [-2]
+        car_driving_time_collection = [None]
+        travel_time_ratio_collection = [-2]
+        average_number_of_transfers_collection = [None]
+        average_walk_distance_of_trip_collection = [None]
+        trip_frequency_collection = [None]
+        itineraries_collection = [None]
+        max_distance_station_to_stop_collection = [None]
+
+        #attributes for the poi object
+        date_collection = [None]
+        time_collection = [None]
+        search_window_collection = [None]
+        catchment_area_collection = [None]
+        possible_start_stations_collection = [None]
+
+        if poi is not None:
+            start_station_data = ""
+            date_collection[0] = poi.date
+            time_collection[0] = poi.time
+            search_window_collection[0] = poi.search_window
+            catchment_area_collection[0] = poi.catchment_area
+            for start_station in poi.get_possible_start_stations():
+                data = start_station + ", "
+                start_station_data = start_station_data + data
+            possible_start_stations_collection[0] = start_station_data
 
 
 
         for station in station_collection:
             itineraries_data = ""
+            start_station_data = ""
             name_collection.append(station.name)
             if station.average_trip_time is not None:
                 average_trip_time_collection.append(station.average_trip_time)
@@ -343,8 +370,23 @@ class PublicTransitAnalysis:
             for itinerary in station.selected_itineraries:
                 data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
                 itineraries_data = itineraries_data + data
+                start_station = itinerary.start_station + ", "
+                start_station_data = start_station_data + start_station
             itineraries_collection.append(itineraries_data)
+            possible_start_stations_collection.append(start_station_data)
             max_distance_station_to_stop_collection.append(station.max_distance_station_to_stop)
+
+            if poi is not None:
+                date_collection.append(poi.date)
+                time_collection.append(poi.time)
+                search_window_collection.append(poi.search_window)
+                catchment_area_collection.append(poi.catchment_area)
+            else:
+                date_collection.append(None)
+                time_collection.append(None)
+                search_window_collection.append(None)
+                catchment_area_collection.append(None)
+
         df = pd.DataFrame(
             {
                 "Name": name_collection,
@@ -355,7 +397,13 @@ class PublicTransitAnalysis:
                 "car_driving_time": car_driving_time_collection,
                 "average_walk_distance_of_trip": average_walk_distance_of_trip_collection,
                 "itinerary_overview": itineraries_collection,
-                "max_distance_station_to_stop": max_distance_station_to_stop_collection
+                "max_distance_station_to_stop": max_distance_station_to_stop_collection,
+                "date": date_collection,
+                "time": time_collection,
+                "search_window": search_window_collection,
+                "catchment_area": catchment_area_collection,
+                "possible_start_stations": possible_start_stations_collection
+
             }
         )
         return df
@@ -382,24 +430,22 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
         return station_collection
 
-    def create_itineraries_from_start_to_each_station(self, station_collection, date: str, time: str, search_window: int, catchment_area, start: dict):
-        possible_start_stations = []
+    def create_itineraries_from_start_to_each_station(self, station_collection, start: Request): #date: str, time: str, search_window: int, catchment_area, start: dict):
+        #possible_start_stations = []
         possible_start_coordinates = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
-            station.query_and_create_transit_itineraries(date, time, search_window, start=start)
-            station.filter_itineraries_with_permissible_catchment_area("start", catchment_area)
+            station.query_and_create_transit_itineraries(start, "start")
+            station.filter_itineraries_with_permissible_catchment_area("start", start.catchment_area)
             station.filter_shortest_itinerary()
             for itinerary in station.itineraries_with_permissible_catchment_area:
-                if possible_start_stations.count(itinerary.start_station) == 0:
-                    possible_start_stations.append(itinerary.start_station)
+                start.add_possible_start_station(itinerary.start_station)
             print(f"{item_index}, {station.name}, shortest itinerary calculated; ")
-        while "" in possible_start_stations: possible_start_stations.remove("")  # because of the declaration of stat_station, there can be empty strings in possible_start_station
-        print("possible start stations: ", possible_start_stations)
+        start.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         # get the coordinates of the possible start stations and find max distance
         max_distance = 0.0
         for station in station_collection:
-            for start_station in possible_start_stations:
+            for start_station in start.get_possible_start_stations():
                 if station.name == start_station:
                     start_coordinates = {"lat": station.mean_lat, "lon": station.mean_lon}
                     possible_start_coordinates.append(start_coordinates)
@@ -412,19 +458,26 @@ class PublicTransitAnalysis:
             if len(station.itineraries_with_permissible_catchment_area) == 0:
                 station.queried_itineraries.clear()
                 for start_coordinate in possible_start_coordinates:
-                    station.query_and_create_transit_itineraries(date, time, search_window, start=start_coordinate)
+                    station.query_and_create_transit_itineraries(start, "start")
                 station.filter_itineraries_with_permissible_catchment_area("start", max_distance)
                 station.filter_shortest_itinerary()
         for station in station_collection:
-            station.calculate_travel_time_ratio(start=start)
+            station.calculate_travel_time_ratio(start, "start")
 
-    def export_stations_as_geopackage(self, station_collection, filepath, layer_name):
+    def export_stations_as_geopackage(self, station_collection, filepath, layer_name, poi:Request=None):
         mean_lat_collection = []
         mean_lon_collection = []
+        if poi is not None:
+            print("poi an export_stations_as_geopackage übergeben")
+            mean_lat_collection.append(poi.lat)
+            mean_lon_collection.append(poi.lon)
+        else:
+            mean_lat_collection.append(None)
+            mean_lon_collection.append(None)
         for station in station_collection:
             mean_lat_collection.append(station.mean_lat)
             mean_lon_collection.append(station.mean_lon)
-        station_attributes = self.create_dataframe_with_station_attributes(station_collection)
+        station_attributes = self.create_dataframe_with_station_attributes(station_collection, poi=poi)
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(mean_lon_collection, mean_lat_collection), crs="EPSG:4326")
         gdf.to_file(filepath, driver='GPKG', layer=layer_name)
@@ -433,7 +486,6 @@ class PublicTransitAnalysis:
 
 
     def stations_from_otp_to_gpkg(self, export_to_gpkg=True):
-        self.iface.messageBar().pushMessage("The button was pressed, your request is working")
         stops_as_dict = self.query_all_stops()
         all_stops = self.create_stop_objects(stops_as_dict)
         all_stations = self.create_stations(all_stops)
@@ -461,12 +513,11 @@ class PublicTransitAnalysis:
                 search_window=self.dlg.le_searchWindow.text(),
                 catchment_area=self.dlg.le_catchment_area.text()
             )
-            #start = {"lat": lat, "lon":  lon} #TODO next step is to integrate the new object stat in the following methods
-            self.create_itineraries_from_start_to_each_station(all_stations[0:20], date, time, search_window, catchment_area, start)
-            self.export_stations_as_geopackage(all_stations[0:20], filepath, layer_name)
+            self.create_itineraries_from_start_to_each_station(all_stations, start)
+            self.export_stations_as_geopackage(all_stations, filepath, layer_name, poi=start)
 
         elif start_or_end_station == "end":
-            end = {"lat": lat, "lon":  lon}
+            #end = {"lat": lat, "lon":  lon}
             self.not_implemented_yet()
 
     def select_output_file(self, current_line_edit): #
@@ -484,6 +535,31 @@ class PublicTransitAnalysis:
             self.travel_time_symbology(layer)
         elif self.dlg.rb_travel_time_ratio_transit_to_car.isChecked():
             self.travel_time_ratio_symbology(layer)
+
+    def symbology_for_particular_points(self, layer):
+        range_list = []
+        # not reachable stations
+        label = "Station not reachable"
+        lower_limit = -1
+        upper_limit = -1
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        black = "#000000"
+        symbol.setColor(QtGui.QColor(black))
+        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+        range_list.append(range)
+
+        # start/end point
+        label = "Point of interest"
+        lower_limit = -2
+        upper_limit = -2
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        pink = "#fe019a"
+        symbol.setColor(QtGui.QColor(pink))
+        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+        range_list.append(range)
+        return range_list
+
+
 
     def travel_time_symbology(self, layer):
         target_field = "average_trip_time"
@@ -516,15 +592,8 @@ class PublicTransitAnalysis:
             lower_limit += interval_size
             upper_limit += interval_size
 
-        #not reachable stations
-        label = "Station not reachable"
-        lower_limit = -1
-        upper_limit = -1
-        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-        black = "#000000"
-        symbol.setColor(QtGui.QColor(black))
-        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-        range_list.append(range)
+        range_of_particular_points = self.symbology_for_particular_points(layer)
+        range_list.extend(range_of_particular_points)
 
         trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
         classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
@@ -549,7 +618,7 @@ class PublicTransitAnalysis:
         limits = [0.0, 1.0, 1.5, 2.1, 2.8, 3.8, 100.0]
         for index, color in enumerate(colour_gradient):
             if index == 5:
-                label = "test" #"\0xE2 "," 3.8"
+                label = "≥3.8"
             else:
                 label = f"{limits[index]} to <{limits[index+1]}"
             lower_limit = limits[index]
@@ -559,15 +628,8 @@ class PublicTransitAnalysis:
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
 
-        # not reachable stations
-        label = "Station not reachable"
-        lower_limit = -1
-        upper_limit = -1
-        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-        black = "#000000"
-        symbol.setColor(QtGui.QColor(black))
-        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-        range_list.append(range)
+        range_of_particular_points = self.symbology_for_particular_points(layer)
+        range_list.extend(range_of_particular_points)
 
         trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
         classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
@@ -736,7 +798,7 @@ class PublicTransitAnalysis:
             self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
-            self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
+            self.dlg.pb_get_stations_from_otp.clicked.connect(lambda: self.stations_from_otp_to_gpkg(export_to_gpkg=True))
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
             self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
             self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
