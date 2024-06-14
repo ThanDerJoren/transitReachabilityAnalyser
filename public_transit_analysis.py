@@ -26,7 +26,7 @@ import math
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication #TODO ist QgsVectorLayer an der richtigen Stelle importiert?
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsProject, QgsVectorLayer, QgsPalLayerSettings, QgsTextFormat, QgsVectorLayerSimpleLabeling
 
 # personal imports
 from console import console
@@ -295,7 +295,7 @@ class PublicTransitAnalysis:
             self.iface.messageBar().pushMessage("Grizzly server is not running or runs on an different port")
             return False
 
-    def get_request_url(self):
+    def get_request_url(self): #TODO add this to the right functions which need the url
         if self.dlg.rb_otp_manually_started_8080.isChecked():
             return "http://localhost:8080/otp/gtfs/v1"
         elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
@@ -337,6 +337,7 @@ class PublicTransitAnalysis:
         search_window_collection = [None]
         catchment_area_collection = [None]
         possible_start_stations_collection = [None]
+        quality_category_collection = [None]
 
         if poi is not None:
             start_station_data = ""
@@ -348,6 +349,7 @@ class PublicTransitAnalysis:
                 data = start_station + ", "
                 start_station_data = start_station_data + data
             possible_start_stations_collection[0] = start_station_data
+            quality_category_collection[0] = poi.get_letter_of_quality_category()
 
 
 
@@ -381,11 +383,14 @@ class PublicTransitAnalysis:
                 time_collection.append(poi.time)
                 search_window_collection.append(poi.search_window)
                 catchment_area_collection.append(poi.catchment_area)
+                quality_category_collection.append(None)
+
             else:
                 date_collection.append(None)
                 time_collection.append(None)
                 search_window_collection.append(None)
                 catchment_area_collection.append(None)
+                quality_category_collection.append(None)
 
         df = pd.DataFrame(
             {
@@ -402,7 +407,8 @@ class PublicTransitAnalysis:
                 "time": time_collection,
                 "search_window": search_window_collection,
                 "catchment_area": catchment_area_collection,
-                "possible_start_stations": possible_start_stations_collection
+                "possible_start_stations": possible_start_stations_collection,
+                "quality_category": quality_category_collection
 
             }
         )
@@ -513,6 +519,9 @@ class PublicTransitAnalysis:
                 search_window=self.dlg.le_searchWindow.text(),
                 catchment_area=self.dlg.le_catchment_area.text()
             )
+            if start.incorrect_input:
+                self.iface.messageBar().pushMessage(start.error_message)
+                return
             self.create_itineraries_from_start_to_each_station(all_stations, start)
             self.export_stations_as_geopackage(all_stations, filepath, layer_name, poi=start)
 
@@ -525,6 +534,13 @@ class PublicTransitAnalysis:
             self.dlg, "Filepath ", "", '*.gpkg')
         if current_line_edit == "itineraries":
                 self.dlg.le_filepath_itineraries.setText(filename)
+                index = -6
+                layer_name = ""
+                while not(filename[index] == "/" or filename[index] == "\\"):
+                    layer_name += filename[index]
+                    index -= 1
+                layer_name = layer_name[::-1] #reverse the string
+                self.dlg.le_layer_name.setText(layer_name)
 
     def set_default_symbology(self):
         layer_collection = QgsProject.instance().layerTreeRoot().children()
@@ -535,6 +551,7 @@ class PublicTransitAnalysis:
             self.travel_time_symbology(layer)
         elif self.dlg.rb_travel_time_ratio_transit_to_car.isChecked():
             self.travel_time_ratio_symbology(layer)
+        self.develop_labeling()
 
     def symbology_for_particular_points(self, layer):
         range_list = []
@@ -552,13 +569,50 @@ class PublicTransitAnalysis:
         label = "Point of interest"
         lower_limit = -2
         upper_limit = -2
-        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol = QgsMarkerSymbol.createSimple({'name': 'square', "size": 4})
+        #symbol = QgsSymbol.defaultSymbol(layer.geometryType())
         pink = "#fe019a"
         symbol.setColor(QtGui.QColor(pink))
         range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
         range_list.append(range)
+
+
+        # #set label for quality category
+        # code from here: https://www.geographyrealm.com/labeling-and-map-transparency-qgis-python-programming-cookbook/
+        # label = QgsPalLayerSettings()
+        # label.readFromLayer(layer)
+        # label.enabled = True
+        # label.fieldName = "quality_category"
+        # label.placement = QgsPalLayerSettings.AroundPoint
+        # label.setDataDefinedProperty(QgsPalLayerSettings.Size, True, True,"8")
+        # label.writeToLayer(layer)
         return range_list
 
+    def develop_labeling(self):
+        """
+        Maybe I find her an alternative, where I can do more precide settings:
+        https://gis.stackexchange.com/a/469984
+        """
+
+        # #code from here: https://gis.stackexchange.com/a/321029
+        layer_collection = QgsProject.instance().layerTreeRoot().children()
+        layer_index = self.dlg.cb_layer_symbology.currentIndex()
+        layer = layer_collection[layer_index].layer()
+
+        text_format = QgsTextFormat()
+        label = QgsPalLayerSettings()
+        label.fieldName = 'quality_category'
+        label.enabled = True
+        label.setFormat(text_format)
+
+        # --
+        label.placement = QgsPalLayerSettings.Line
+        # --
+
+        labeler = QgsVectorLayerSimpleLabeling(label)
+        layer.setLabelsEnabled(True)
+        layer.setLabeling(labeler)
+        layer.triggerRepaint()
 
 
     def travel_time_symbology(self, layer):
@@ -639,82 +693,6 @@ class PublicTransitAnalysis:
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
 
-
-
-    def develop_default_symbology(self):
-        # TODO check if the selected layer is an QgsVectorLayer
-        layer_collection = QgsProject.instance().layerTreeRoot().children()
-        layer_index = self.dlg.cb_layer_symbology.currentIndex()
-        layer = layer_collection[layer_index].layer()
-
-        target_field = "average_trip_time"
-
-        # colour gradient
-        opacity = 1
-        interval_size = 5
-        data_collection = []
-        features = layer.getFeatures()
-        for row in features:
-            data_collection.append(row[target_field])
-        data_collection.sort(reverse=True)
-        interval_amount = math.ceil(data_collection[0] / interval_size)
-
-
-        colour_progression = ['#0000FF', "#013220", "#FFFF00","#FFA500",  '#800080'] #red: '#FF0000', dark green: #013220
-        colour_gradient = self.create_gradient(colour_progression, interval_amount)
-
-        # lime = Color("lime") #‘lime’ color is full green
-        # red = Color("red")
-        # purple = Color("purple")
-        # blue = Color("blue")
-        # colour_gradient = list(blue.range_to(red,interval_amount))
-        # print(colour_gradient)
-        # for color in colour_gradient:
-        #     print(color.hex_l)
-        # print(f"intervalAmout: {interval_amount}")
-        # print(f"colour_gradient: {len(colour_gradient)}")
-
-        # create own graduated symbol renderer
-        range_list = []
-        lower_limit = 0.0
-        upper_limit = interval_size
-        for index, color in enumerate(colour_gradient):
-            print(f"lower_limit: {lower_limit}")
-            print(f"upper_limit: {upper_limit}\n")
-            label = f"{lower_limit} - {upper_limit} min."
-            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-            symbol.setColor(QtGui.QColor(color))
-            #symbol.setColor(QtGui.QColor(color.hex_l))
-            # current_opacity = (interval_size-index)/interval_size
-            #symbol.setOpacity(opacity/(index+1))
-            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(range)
-            lower_limit += interval_size
-            upper_limit += interval_size
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.triggerRepaint()
-
-
-
-        # renderer = layer.renderer()
-        # print("Type:", renderer.type())
-        # renderer = QgsGraduatedSymbolRenderer()
-        # print(renderer.type())
-        # layer.setRenderer(renderer)
-
-
-
-        # fieldnames = [field.name() for field in layer.fields()]
-        # print(fieldnames)
-        # features = layer.getFeatures()
-        # for f in features: # heir wird zeilenweise durch iteriert, nicht spaltenweise
-        #     print(f["average_trip_time"])
-
     """
     ChatGPT Code:
     Request: "Python code: Farbverlauf in beliebig vielen Intervallen als list mit Hex code Farbverlauf: Blau, grün, gelb, rot, Lila"
@@ -774,6 +752,8 @@ class PublicTransitAnalysis:
     end of ChatGPT code
     """
 
+
+
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
     def testfunction(self):
@@ -802,6 +782,8 @@ class PublicTransitAnalysis:
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
             self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
             self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
+
+            self.dlg.pb_develop_labeling.clicked.connect(self.develop_labeling)
 
         # Fetch the currently loaded layers
         layers = QgsProject.instance().layerTreeRoot().children() #Attention this can't go into a layer group
