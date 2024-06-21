@@ -1,17 +1,27 @@
+
+#how to work with datetimepackage: https://docs.python.org/3/library/datetime.html#
+from datetime import time, date, datetime
 class Request:
     #TODO how to end the code, if except in try except
-    def __init__(self, lat, lon, date, time, search_window, catchment_area, ):
+    #TODO add max_walking_time as field in GUi and pass walk speed and max_walking_time.
+    def __init__(self, lat, lon, day, time_start, time_end, walk_speed, max_walking_time):
         self.__incorrect_input = False
         self.__error_message = ""
         self.lat = lat
         self.lon = lon
-        self.date = date
-        self.time = time
-        self.search_window = search_window
-        self.catchment_area = catchment_area
+        self.day = day
+        self.time_start = time_start
+        #realistisch gesehen ist time_end die letzte ZEit zum lsofahren
+        self.time_end = time_end #TODO ist das die letzte ZEit zum losfahren oder die letzte ZEit zum ankommen?
+        self.walk_speed = walk_speed
+        self.max_walking_time = max_walking_time
+        self.catchment_area = self.calculate_distance(self.walk_speed, self.max_walking_time)
         self.__possible_start_stations = []
         self.quality_category = 500
+        search_window = self.calculate_search_window()
+        self.search_window = search_window
 
+    #TODO will I use the setter after the construction of an objet again? Then it is not a good idea to do the converting inside the setter
 
     @property
     def lat(self):
@@ -38,39 +48,42 @@ class Request:
             self.__error_message += "The lon text field has to contain only numbers" + "\n"
 
     @property
-    def date(self):
-        return self.__date
+    def day(self):
+        return self.__day
 
-    @date.setter
-    def date(self, date):
-        if (len(date) == 10 and
-                date[4] == "-" and
-                date[7] == "-" and
-                date[0:4].isdecimal() and
-                date[5:7].isdecimal() and
-                date[8:10].isdecimal() and
-                int(date[5:7]) <13 and
-                int(date[8:10])<32):
-            self.__date = date
-        else:
+    @day.setter
+    def day(self, day):
+        try:
+            self.__day = date.fromisoformat(day)
+        except ValueError:
             self.__incorrect_input = True
             self.__error_message += "The date has to be given in YYYY-MM-DD" + "\n"
 
     @property
-    def time(self):
-        return self.__time
+    def time_start(self):
+        return self.__time_start
 
-    @time.setter
-    def time(self, time):
-        if (len(time)==5 and
-                time[0:2].isdecimal() and
-                time[3:5].isdecimal() and
-                int(time[0:2])<25 and
-                int(time[3:5])<60):
-            self.__time = time
-        else:
+    @time_start.setter
+    def time_start(self, begin):
+        try:
+            self.__time_start = time.fromisoformat(begin)
+        except ValueError:
             self.__incorrect_input = True
-            self.__error_message += "The time has to be given in hh:mm" + "\n"
+            self.__error_message += "The time_start has to be given in hh:mm" + "\n"
+
+
+    @property
+    def time_end(self):
+        return self.__time_end
+
+    @time_end.setter
+    def time_end(self, end):
+        try:
+            self.__time_end = time.fromisoformat(end)
+        except ValueError:
+            self.__incorrect_input = True
+            self.__error_message += "The time_end has to be given in hh:mm" + "\n"
+
 
     @property
     def search_window(self):
@@ -78,11 +91,28 @@ class Request:
 
     @search_window.setter
     def search_window(self, search_window):
-        if search_window.isdecimal():
-            self.__search_window = int(search_window) #set default to 3600 seconds
-        else:
+        try:
+            self.__search_window = int(search_window)
+        except ValueError:
             self.__incorrect_input = True
             self.__error_message += "The search window text field has to contain only numbers" + "\n"
+
+    @property
+    def walk_speed(self):
+        return self.__walk_speed
+
+    @walk_speed.setter
+    def walk_speed(self, speed):
+        self.__walk_speed = speed
+
+    @property
+    def max_walking_time(self):
+        return self.__max_walking_time
+
+    @max_walking_time.setter
+    def max_walking_time(self, duration):
+        self.__max_walking_time = duration
+
 
     @property
     def catchment_area(self):
@@ -110,6 +140,21 @@ class Request:
     @quality_category.setter
     def quality_category(self, value:float):
         self.__quality_category = value
+
+    def calculate_search_window(self):
+        diff = datetime.combine(self.day, self.time_end) - datetime.combine(self.day, self.time_start)
+        diff = diff.total_seconds()
+        if diff >= 0:
+            return diff
+        else:
+            self.__incorrect_input = True
+            self.__error_message += "time_start is later than time_end" + "\n"
+
+    def calculate_distance(self, speed, duration):
+        distance = speed*duration
+        return distance
+
+
 
     def get_possible_start_stations(self):
         return self.__possible_start_stations

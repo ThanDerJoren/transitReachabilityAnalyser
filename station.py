@@ -8,6 +8,7 @@ import requests
 #import networkx as nx
 from shapely.geometry import Point
 from shapely.geometry import Polygon
+from datetime import time, date, datetime
 
 from .stop import Stop # used in relatedStops
 from .itinerary import Itinerary
@@ -36,6 +37,7 @@ class Station:
         self.travel_time_ratio: float = None
         self.average_number_of_transfers: float = None
         self.average_walk_distance_of_trip: float = None
+        self.average_walk_time_of_trip: float = None
         self.trip_frequency: float = None
         self.queried_itineraries = []
         self.itineraries_with_permissible_catchment_area = []
@@ -46,8 +48,8 @@ class Station:
         return position
 
     def query_and_create_transit_itineraries(self, poi: Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
-        date = f"\"{poi.date}\""
-        time = f"\"{poi.time}\""
+        day = f"\"{poi.day.isoformat()}\""
+        departure = f"\"{poi.time_start.isoformat(timespec='minutes')}\""
 
         if start_or_end_station == "start":
             start = {"lat": poi.lat, "lon": poi.lon}
@@ -61,14 +63,15 @@ class Station:
 
         plan = f"""
             {{plan(
-                date: {date},
-                time: {time},
+                date: {day},
+                time: {departure},
                 from: {{ lat: {start["lat"]}, lon: {start["lon"]}}},
                 to: {{ lat: {end["lat"]}, lon: {end["lon"]}}},
                 transportModes: [{{mode: TRANSIT}}, {{mode: WALK}}]
                 numItineraries: 10
                 walkReluctance: 3.0
                 searchWindow: {poi.search_window}
+                walkSpeed: {poi.walk_speed}
                 ){{
                     itineraries{{
                         startTime,
@@ -117,12 +120,13 @@ class Station:
             else:
                 distance_from_end_station = 0
             itinerary = Itinerary(
-                datetime.datetime.fromtimestamp(element["startTime"]/1000.0),  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
+                datetime.fromtimestamp(element["startTime"]/1000.0),  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
                 start_station,
                 end_station,
                 round(element["duration"]/60), # seconds in minutes
                 element["numberOfTransfers"],
                 element["walkDistance"],
+                element["walkDistance"]/poi.walk_speed,
                 distance_to_start_station,
                 distance_from_end_station,
                 modes,
@@ -187,7 +191,7 @@ class Station:
         queriedPlan = json.loads(queriedPlan.content)
         for itinerary in queriedPlan["data"]["plan"]["itineraries"]:
             print(f"car Itinerary:",itinerary["duration"], f"station: {self.name}")
-            self.car_driving_time = itinerary["duration"]/60 # seconds in minutes
+            self.car_driving_time = itinerary["duration"]/60 + 5# seconds in minutes TODO 5 minutes for walking to car and search time
 
     def filter_itineraries_with_permissible_catchment_area(self, start_or_end_station, catchment_area):
         if start_or_end_station == "start":
@@ -217,6 +221,7 @@ class Station:
             self.average_trip_time = self.selected_itineraries[0].duration
             self.average_number_of_transfers = self.selected_itineraries[0].number_of_transfers
             self.average_walk_distance_of_trip = self.selected_itineraries[0].walk_distance
+            self.average_walk_time_of_trip = self.selected_itineraries[0].walk_time
 
 
     def calculate_travel_time_ratio(self, poi:Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
@@ -239,6 +244,7 @@ class Station:
         end_coordinate = (end["lat"], start["lon"])
         return geopy.distance.geodesic(start_coordiante, end_coordinate).m
 
+    #TODO this function is not used right now, but it is a nice functionality or rather a nice onformation. Implement this later for each station
     def calculate_max_distance_station_to_stop(self):
         max_distance = 0.0
         for stop in self.related_stops:

@@ -27,6 +27,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication #TODO ist 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsPalLayerSettings, QgsTextFormat, QgsVectorLayerSimpleLabeling
+from datetime import time, date, datetime # Don't delete! I use this for objects form request
 
 # personal imports
 from console import console
@@ -327,23 +328,30 @@ class PublicTransitAnalysis:
         travel_time_ratio_collection = [-2]
         average_number_of_transfers_collection = [None]
         average_walk_distance_of_trip_collection = [None]
+        average_walk_time_collection = [None]
         trip_frequency_collection = [None]
-        itineraries_collection = [None]
+        selected_itineraries_collection = [None]
+        possible_itineraries_collection = [None]
         max_distance_station_to_stop_collection = [None]
 
         #attributes for the poi object
         date_collection = [None]
-        time_collection = [None]
-        search_window_collection = [None]
+        time_start_collection = [None]
+        time_end_collection = [None]
+        walk_speed_collection = [None]
+        max_walking_time_collection = [None]
         catchment_area_collection = [None]
         possible_start_stations_collection = [None]
         quality_category_collection = [None]
 
+
         if poi is not None:
             start_station_data = ""
-            date_collection[0] = poi.date
-            time_collection[0] = poi.time
-            search_window_collection[0] = poi.search_window
+            date_collection[0] = poi.day.isoformat()
+            time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
+            time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
+            walk_speed_collection[0] = poi.walk_speed*3.6
+            max_walking_time_collection[0] = poi.max_walking_time/60
             catchment_area_collection[0] = poi.catchment_area
             for start_station in poi.get_possible_start_stations():
                 data = start_station + ", "
@@ -354,8 +362,9 @@ class PublicTransitAnalysis:
 
 
         for station in station_collection:
-            itineraries_data = ""
+            selected_itineraries_data = ""
             start_station_data = ""
+            possible_itineraries_data = ""
             name_collection.append(station.name)
             if station.average_trip_time is not None:
                 average_trip_time_collection.append(station.average_trip_time)
@@ -368,27 +377,39 @@ class PublicTransitAnalysis:
                 travel_time_ratio_collection.append(-1)
             average_number_of_transfers_collection.append(station.average_number_of_transfers)
             average_walk_distance_of_trip_collection.append(station.average_walk_distance_of_trip)
+            if station.average_walk_time_of_trip is not None:
+                average_walk_time_collection.append(station.average_walk_time_of_trip/60) #seconds in minutes
+            else:
+                average_walk_time_collection.append(station.average_walk_time_of_trip)
             trip_frequency_collection.append(station.trip_frequency)
             for itinerary in station.selected_itineraries:
-                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
-                itineraries_data = itineraries_data + data
+                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, walk_distance: {itinerary.walk_distance}, walk_time: {itinerary.walk_time/60}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
+                selected_itineraries_data = selected_itineraries_data + data
                 start_station = itinerary.start_station + ", "
                 start_station_data = start_station_data + start_station
-            itineraries_collection.append(itineraries_data)
+            selected_itineraries_collection.append(selected_itineraries_data)
             possible_start_stations_collection.append(start_station_data)
+            for itinerary in station.itineraries_with_permissible_catchment_area:
+                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, walk_distance: {itinerary.walk_distance}, walk_time: {itinerary.walk_time/60}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
+                possible_itineraries_data = possible_itineraries_data + data
+            possible_itineraries_collection.append(possible_itineraries_data)
             max_distance_station_to_stop_collection.append(station.max_distance_station_to_stop)
 
             if poi is not None:
-                date_collection.append(poi.date)
-                time_collection.append(poi.time)
-                search_window_collection.append(poi.search_window)
+                date_collection.append(poi.day.isoformat())
+                time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
+                time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
+                walk_speed_collection.append(poi.walk_speed*3.6)
+                max_walking_time_collection.append(poi.max_walking_time/60)
                 catchment_area_collection.append(poi.catchment_area)
                 quality_category_collection.append(None)
 
             else:
                 date_collection.append(None)
-                time_collection.append(None)
-                search_window_collection.append(None)
+                time_start_collection.append(None)
+                time_end_collection.append(None)
+                walk_speed_collection.append(None)
+                max_walking_time_collection.append(None)
                 catchment_area_collection.append(None)
                 quality_category_collection.append(None)
 
@@ -400,12 +421,16 @@ class PublicTransitAnalysis:
                 "trip_frequency_collection": trip_frequency_collection,
                 "average_trip_time": average_trip_time_collection,
                 "car_driving_time": car_driving_time_collection,
-                "average_walk_distance_of_trip": average_walk_distance_of_trip_collection,
-                "itinerary_overview": itineraries_collection,
+                "average_walk_distance": average_walk_distance_of_trip_collection,
+                "average_walk_time": average_walk_time_collection,
+                "selected_itineraries": selected_itineraries_collection,
+                "possible_itineraries": possible_itineraries_collection,
                 "max_distance_station_to_stop": max_distance_station_to_stop_collection,
                 "date": date_collection,
-                "time": time_collection,
-                "search_window": search_window_collection,
+                "time_start": time_start_collection,
+                "time_end": time_end_collection,
+                "walk_speed_in_km/h": walk_speed_collection,
+                "max_walking_time_in_min": max_walking_time_collection,
                 "catchment_area": catchment_area_collection,
                 "possible_start_stations": possible_start_stations_collection,
                 "quality_category": quality_category_collection
@@ -437,8 +462,7 @@ class PublicTransitAnalysis:
         return station_collection
 
     def create_itineraries_from_start_to_each_station(self, station_collection, start: Request): #date: str, time: str, search_window: int, catchment_area, start: dict):
-        #possible_start_stations = []
-        possible_start_coordinates = []
+        #possible_start_coordinates = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
             station.query_and_create_transit_itineraries(start, "start")
@@ -449,24 +473,25 @@ class PublicTransitAnalysis:
             print(f"{item_index}, {station.name}, shortest itinerary calculated; ")
         start.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         # get the coordinates of the possible start stations and find max distance
-        max_distance = 0.0
-        for station in station_collection:
-            for start_station in start.get_possible_start_stations():
-                if station.name == start_station:
-                    start_coordinates = {"lat": station.mean_lat, "lon": station.mean_lon}
-                    possible_start_coordinates.append(start_coordinates)
-                    station.calculate_max_distance_station_to_stop()
-                    if station.max_distance_station_to_stop > max_distance:
-                        max_distance = station.max_distance_station_to_stop
+        # max_distance = 0.0
+        # for station in station_collection:
+        #     for start_station in start.get_possible_start_stations():
+        #         if station.name == start_station:
+        #             start_coordinates = {"lat": station.mean_lat, "lon": station.mean_lon}
+        #             possible_start_coordinates.append(start_coordinates)
+        #             station.calculate_max_distance_station_to_stop()
+        #             if station.max_distance_station_to_stop > max_distance:
+        #                 max_distance = station.max_distance_station_to_stop
         # second try: find an itinerary explicit from the possible_start_stations to all stations, which weren't reached in the first try
         # TODO is this even necessery? or is this not find any additional itinerary?
-        for station in station_collection:
-            if len(station.itineraries_with_permissible_catchment_area) == 0:
-                station.queried_itineraries.clear()
-                for start_coordinate in possible_start_coordinates:
-                    station.query_and_create_transit_itineraries(start, "start")
-                station.filter_itineraries_with_permissible_catchment_area("start", max_distance)
-                station.filter_shortest_itinerary()
+        # for station in station_collection:
+        #     if len(station.itineraries_with_permissible_catchment_area) == 0:
+        #         station.queried_itineraries.clear()
+        #         for start_coordinate in possible_start_coordinates:
+        #             station.query_and_create_transit_itineraries(start, "start")
+        #         station.filter_itineraries_with_permissible_catchment_area("start", max_distance)
+        #         station.filter_shortest_itinerary()
+        # calculate the travel time ratio
         for station in station_collection:
             station.calculate_travel_time_ratio(start, "start")
 
@@ -509,21 +534,47 @@ class PublicTransitAnalysis:
         else:
             self.iface.messageBar().pushMessage("The filepath has to be selected first")
             return
+        walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
+        if walkspeed_index == 0:
+            walk_speed = 2/3.6
+        elif walkspeed_index == 1:
+            walk_speed = 4/3.6
+        elif walkspeed_index == 2:
+            walk_speed = 6/3.6
+        elif walkspeed_index == 3:
+            input = self.dlg.le_personalized_tempo.text()
+            try:
+                walk_speed = float(input)/3.6
+            except ValueError:
+                error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
+                self.iface.messageBar().pushMessage(error_message)
+                return
+        walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
+        if walkingtime_index == 0:
+            max_walking_time = 17*60 #minutes in seconds
+        elif walkingtime_index == 1:
+            input = self.dlg.le_max_walking_time.text()
+            try:
+                max_walking_time = int(input)*60 #minutes in seconds
+            except ValueError:
+                error_message = "The max_walking_time has to be an integer" + "\n"
+                self.iface.messageBar().pushMessage(error_message)
 
         if start_or_end_station == "start":
             start = Request(
                 lat=self.dlg.le_lat_of_start_end.text(),
                 lon=self.dlg.le_lon_of_start_end.text(),
-                date=self.dlg.le_date.text(),
-                time=self.dlg.le_time.text(),
-                search_window=self.dlg.le_searchWindow.text(),
-                catchment_area=self.dlg.le_catchment_area.text()
+                day=self.dlg.le_date.text(),
+                time_start=self.dlg.le_time_start.text(),
+                time_end=self.dlg.le_time_end.text(),
+                walk_speed=walk_speed,
+                max_walking_time=max_walking_time
             )
             if start.incorrect_input:
                 self.iface.messageBar().pushMessage(start.error_message)
                 return
-            self.create_itineraries_from_start_to_each_station(all_stations, start)
-            self.export_stations_as_geopackage(all_stations, filepath, layer_name, poi=start)
+            self.create_itineraries_from_start_to_each_station(all_stations[0:20], start)
+            self.export_stations_as_geopackage(all_stations[0:20], filepath, layer_name, poi=start)
 
         elif start_or_end_station == "end":
             #end = {"lat": lat, "lon":  lon}
