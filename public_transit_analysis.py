@@ -33,6 +33,7 @@ from datetime import time, date, datetime # Don't delete! I use this for objects
 from console import console
 from .stop import Stop
 from .station import Station
+from .route import Route
 from .request import Request
 import sys
 import requests, json
@@ -303,6 +304,40 @@ class PublicTransitAnalysis:
             port_number = self.dlg.le_port_number.text()
             return f"http://localhost:{port_number}/otp/gtfs/v1"
 
+    def query_all_stops_incl_departure_times(self, poi:Request):
+        unix_timestamp = int(datetime.timestamp(datetime.combine(poi.day, poi.time_start)))
+        time_range = poi.search_window
+        plan = f"""
+            {{stops {{
+                gtfsId
+                name
+                lat
+                lon
+                vehicleMode
+                stoptimesWithoutPatterns(
+                    startTime: {unix_timestamp}
+                    timeRange: {time_range}
+                    numberOfDepartures:100000) {{
+                        scheduledDeparture
+                        trip {{
+                            route {{
+                                gtfsId
+                                shortName
+                            }}
+                        }}
+                    }}
+            }}
+            }}
+            """
+        if self.check_grizzly_server_is_running():
+            url = self.get_request_url()
+            queried_stops = requests.post(url, json={"query": plan})
+            queried_stops = json.loads(queried_stops.content)
+            queried_stops = queried_stops["data"]["stops"]
+            return queried_stops
+        else:
+            print("stops could not be queried because OTP is not reachable")
+
     def query_all_stops(self):
         if self.check_grizzly_server_is_running():
             url = self.get_request_url()
@@ -439,6 +474,112 @@ class PublicTransitAnalysis:
         )
         return df
 
+    def create_dataframe_for_stop_objects(self, stop_collection, poi:Request=None):
+        name_collection = ["Point of Interest"]
+        gtfs_id_collection = [None]
+        vehicle_mode_collection = [None]
+        related_routes_collection = [None]
+
+        # attributes for the poi object
+        date_collection = [None]
+        time_start_collection = [None]
+        time_end_collection = [None]
+        walk_speed_collection = [None]
+        max_walking_time_collection = [None]
+        catchment_area_collection = [None]
+        possible_start_stations_collection = [None]
+        quality_category_collection = [None]
+
+        if poi is not None:
+            start_station_data = ""
+            date_collection[0] = poi.day.isoformat()
+            time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
+            time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
+            walk_speed_collection[0] = poi.walk_speed * 3.6
+            max_walking_time_collection[0] = poi.max_walking_time / 60
+            catchment_area_collection[0] = poi.catchment_area
+            for start_station in poi.get_possible_start_stations():
+                data = start_station + ", "
+                start_station_data = start_station_data + data
+            possible_start_stations_collection[0] = start_station_data
+            quality_category_collection[0] = poi.get_letter_of_quality_category()
+
+        for stop in stop_collection:
+            departure_data = ""
+            name_collection.append(stop.name)
+            gtfs_id_collection.append(stop.gtfs_id)
+            vehicle_mode_collection.append(stop.vehicle_mode)
+            for route in stop.related_routes:
+                departure_times = []
+                for departure in route.get_departure_times():
+                    departure_times.append(departure.isoformat(timespec='minutes'))
+                data = f"{route.short_name}: {departure_times} \n"
+                departure_data = departure_data + data
+            related_routes_collection.append(departure_data)
+            if poi is not None:
+                date_collection.append(poi.day.isoformat())
+                time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
+                time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
+                walk_speed_collection.append(poi.walk_speed*3.6)
+                max_walking_time_collection.append(poi.max_walking_time/60)
+                catchment_area_collection.append(poi.catchment_area)
+                quality_category_collection.append(None)
+
+            else:
+                date_collection.append(None)
+                time_start_collection.append(None)
+                time_end_collection.append(None)
+                walk_speed_collection.append(None)
+                max_walking_time_collection.append(None)
+                catchment_area_collection.append(None)
+                quality_category_collection.append(None)
+        df = pd.DataFrame(
+            {
+                "name": name_collection,
+                "gtfsId": gtfs_id_collection,
+                "vehicle_mode": vehicle_mode_collection,
+                "related_routes": related_routes_collection,
+                "date": date_collection,
+                "time_start": time_start_collection,
+                "time_end": time_end_collection,
+                "walk_speed_in_km/h": walk_speed_collection,
+                "max_walking_time_in_min": max_walking_time_collection,
+                "catchment_area": catchment_area_collection
+            }
+        )
+        return df
+
+
+    def create_stop_and_route_objects(self, queried_stops):
+        stop_objects = []
+        for stop in queried_stops:
+            route_objects = []
+            # first I have to create an object of all possible routes
+            # then I can add the departure times to the corresponding routes
+            for stop_times in stop["stoptimesWithoutPatterns"]:
+                route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
+                route_shortName = stop_times["trip"]["route"]["shortName"]
+                #check if the routnumber already exists
+                route_already_created = False
+                for route in route_objects:
+                    if route.gtfs_id == route_gtfsId:
+                        route_already_created = True
+                if not(route_already_created):
+                    obj = Route(route_gtfsId, route_shortName)
+                    route_objects.append(obj)
+            for stop_times in stop["stoptimesWithoutPatterns"]:
+                route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
+                seconds_since_midnight = stop_times["scheduledDeparture"]
+                m, s = divmod(seconds_since_midnight, 60)
+                h, m = divmod(m, 60)
+                departure_time = time(hour=h, minute=m, second=s)
+                for route in route_objects:
+                    if route.gtfs_id == route_gtfsId:
+                        route.add_departure_time(departure_time)
+            new_stop = Stop(stop["name"], stop["gtfsId"], stop["lat"], stop["lon"], stop["vehicleMode"], route_objects)
+            stop_objects.append(new_stop)
+        return stop_objects
+
     def create_stop_objects(self, queried_stops):
         stop_objects = []
         for data in queried_stops:
@@ -495,6 +636,25 @@ class PublicTransitAnalysis:
         for station in station_collection:
             station.calculate_travel_time_ratio(start, "start")
 
+    def export_stops_as_geopackage(self, stop_collection, filepath, layer_name, poi:Request = None):
+        lat_collection = []
+        lon_collection = []
+        if poi is not None:
+            print("poi an export_stations_as_geopackage übergeben")
+            lat_collection.append(poi.lat)
+            lon_collection.append(poi.lon)
+        else:
+            lat_collection.append(None)
+            lon_collection.append(None)
+        for stop in stop_collection:
+            lat_collection.append(stop.lat)
+            lon_collection.append(stop.lon)
+        station_attributes = self.create_dataframe_for_stop_objects(stop_collection, poi=poi)
+        gdf = gpd.GeoDataFrame(station_attributes,
+                               geometry=gpd.points_from_xy(lon_collection, lat_collection), crs="EPSG:4326")
+        gdf.to_file(filepath, driver='GPKG', layer=layer_name)
+        layer = QgsVectorLayer(filepath, layer_name, "ogr")  # TODO funktioniert das so?
+        QgsProject.instance().addMapLayer(layer)
     def export_stations_as_geopackage(self, station_collection, filepath, layer_name, poi:Request=None):
         mean_lat_collection = []
         mean_lon_collection = []
@@ -514,6 +674,59 @@ class PublicTransitAnalysis:
         gdf.to_file(filepath, driver='GPKG', layer=layer_name)
         layer = QgsVectorLayer(filepath, layer_name, "ogr") #TODO funktioniert das so?
         QgsProject.instance().addMapLayer(layer)
+
+    def stops_with_departure_times_from_otp_to_gpkg(self):
+        # copied from itineraries_data_from_otp_to_geopackage
+        layer_name = self.dlg.le_layer_name.text()  # TODO co ntrole, that the name is usable as filename
+        if self.dlg.le_filepath_itineraries.text() is not None:
+            filepath = self.dlg.le_filepath_itineraries.text()
+        else:
+            self.iface.messageBar().pushMessage("The filepath has to be selected first")
+            return
+        walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
+        if walkspeed_index == 0:
+            walk_speed = 2 / 3.6
+        elif walkspeed_index == 1:
+            walk_speed = 4 / 3.6
+        elif walkspeed_index == 2:
+            walk_speed = 6 / 3.6
+        elif walkspeed_index == 3:
+            input = self.dlg.le_personalized_tempo.text()
+            try:
+                walk_speed = float(input) / 3.6
+            except ValueError:
+                error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
+                self.iface.messageBar().pushMessage(error_message)
+                return
+        walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
+        if walkingtime_index == 0:
+            max_walking_time = 17 * 60  # minutes in seconds
+        elif walkingtime_index == 1:
+            input = self.dlg.le_max_walking_time.text()
+            try:
+                max_walking_time = int(input) * 60  # minutes in seconds
+            except ValueError:
+                error_message = "The max_walking_time has to be an integer" + "\n"
+                self.iface.messageBar().pushMessage(error_message)
+        poi = Request(
+            lat=self.dlg.le_lat_of_start_end.text(),
+            lon=self.dlg.le_lon_of_start_end.text(),
+            day=self.dlg.le_date.text(),
+            time_start=self.dlg.le_time_start.text(),
+            time_end=self.dlg.le_time_end.text(),
+            walk_speed=walk_speed,
+            max_walking_time=max_walking_time
+        )
+        if poi.incorrect_input:
+            self.iface.messageBar().pushMessage(poi.error_message)
+            return
+
+        all_stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
+        all_stops = self.create_stop_and_route_objects(all_stops_as_dict)
+        self.export_stops_as_geopackage(all_stops, filepath, layer_name, poi=poi)
+
+
+
 
 
     def stations_from_otp_to_gpkg(self, export_to_gpkg=True):
@@ -827,7 +1040,7 @@ class PublicTransitAnalysis:
             self.first_start = False
             self.dlg = PublicTransitAnalysisDialog()
             self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
-            self.dlg.pb_get_stops_from_otp.clicked.connect(self.not_implemented_yet)
+            self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
             self.dlg.pb_get_stations_from_otp.clicked.connect(lambda: self.stations_from_otp_to_gpkg(export_to_gpkg=True))
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))

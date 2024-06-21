@@ -127,31 +127,18 @@
    <property name="title">
     <string>Stations layer erzeugen</string>
    </property>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QPushButton" name="pb_get_stations_from_otp">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>551</width>
-      <height>30</height>
+      <x>11</x>
+      <y>33</y>
+      <width>204</width>
+      <height>23</height>
      </rect>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="pb_get_stations_from_otp">
-       <property name="text">
-        <string>get all stations from otp and create layer</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pb_get_stops_from_otp">
-       <property name="text">
-        <string>get all stops from otp and create layer</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <property name="text">
+     <string>get all stations from otp and create layer</string>
+    </property>
    </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_3">
@@ -160,7 +147,7 @@
      <x>30</x>
      <y>320</y>
      <width>751</width>
-     <height>311</height>
+     <height>351</height>
     </rect>
    </property>
    <property name="title">
@@ -183,7 +170,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>280</y>
+      <y>250</y>
       <width>432</width>
       <height>30</height>
      </rect>
@@ -463,7 +450,7 @@
      <string>max. Fußwegzeit</string>
     </property>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>160</x>
@@ -498,6 +485,19 @@
       </widget>
      </item>
     </layout>
+   </widget>
+   <widget class="QPushButton" name="pb_get_stops_from_otp">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>300</y>
+      <width>192</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>get all stops from otp and create layer</string>
+    </property>
    </widget>
   </widget>
   <widget class="QgsDateTimeEdit" name="mDateTimeEdit">
@@ -605,32 +605,6 @@
      <string>develop_labeling</string>
     </property>
    </widget>
-  </widget>
-  <widget class="QLabel" name="label_6">
-   <property name="geometry">
-    <rect>
-     <x>540</x>
-     <y>640</y>
-     <width>65</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Einzugsradius</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="le_catchment_area">
-   <property name="geometry">
-    <rect>
-     <x>618</x>
-     <y>640</y>
-     <width>133</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>300</string>
-   </property>
   </widget>
  </widget>
  <customwidgets>

@@ -3,7 +3,6 @@
 from datetime import time, date, datetime
 class Request:
     #TODO how to end the code, if except in try except
-    #TODO add max_walking_time as field in GUi and pass walk speed and max_walking_time.
     def __init__(self, lat, lon, day, time_start, time_end, walk_speed, max_walking_time):
         self.__incorrect_input = False
         self.__error_message = ""
@@ -18,9 +17,7 @@ class Request:
         self.catchment_area = self.calculate_distance(self.walk_speed, self.max_walking_time)
         self.__possible_start_stations = []
         self.quality_category = 500
-        search_window = self.calculate_search_window()
-        self.search_window = search_window
-
+        self.search_window = self.calculate_search_window()
     #TODO will I use the setter after the construction of an objet again? Then it is not a good idea to do the converting inside the setter
 
     @property
@@ -93,6 +90,7 @@ class Request:
     def search_window(self, search_window):
         try:
             self.__search_window = int(search_window)
+            print(self.__search_window)
         except ValueError:
             self.__incorrect_input = True
             self.__error_message += "The search window text field has to contain only numbers" + "\n"
@@ -145,7 +143,9 @@ class Request:
         diff = datetime.combine(self.day, self.time_end) - datetime.combine(self.day, self.time_start)
         diff = diff.total_seconds()
         if diff >= 0:
+            print(f"diff: {diff}")
             return diff
+
         else:
             self.__incorrect_input = True
             self.__error_message += "time_start is later than time_end" + "\n"

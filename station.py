@@ -21,7 +21,7 @@ class Station:
 
     def __init__(self, name, related_stops):
         self.name = name
-        self.related_stops = related_stops  # pass by value? That's important
+        self.related_stops = related_stops.copy()  # pass by value? That's important
         self.mean_lat = 0.0
         self.mean_lon = 0.0
         for stop in self.related_stops:
