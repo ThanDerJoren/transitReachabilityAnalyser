@@ -127,19 +127,6 @@
    <property name="title">
     <string>Stations layer erzeugen</string>
    </property>
-   <widget class="QPushButton" name="pb_get_stations_from_otp">
-    <property name="geometry">
-     <rect>
-      <x>11</x>
-      <y>33</y>
-      <width>204</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>get all stations from otp and create layer</string>
-    </property>
-   </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_3">
    <property name="geometry">
@@ -497,6 +484,19 @@
     </property>
     <property name="text">
      <string>get all stops from otp and create layer</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pb_get_stations_from_otp">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>300</y>
+      <width>204</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>get all stations from otp and create layer</string>
     </property>
    </widget>
   </widget>

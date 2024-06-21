@@ -348,6 +348,54 @@ class PublicTransitAnalysis:
         else:
             print("stops could not be queried because OTP is not reachable")
 
+    def create_request_object(self):
+        layer_name = self.dlg.le_layer_name.text()  # TODO co ntrole, that the name is usable as filename
+        if self.dlg.le_filepath_itineraries.text() is not None:
+            filepath = self.dlg.le_filepath_itineraries.text()
+        else:
+            self.iface.messageBar().pushMessage("The filepath has to be selected first")
+            return
+        walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
+        if walkspeed_index == 0:
+            walk_speed = 2 / 3.6
+        elif walkspeed_index == 1:
+            walk_speed = 4 / 3.6
+        elif walkspeed_index == 2:
+            walk_speed = 6 / 3.6
+        elif walkspeed_index == 3:
+            input = self.dlg.le_personalized_tempo.text()
+            try:
+                walk_speed = float(input) / 3.6
+            except ValueError:
+                error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
+                self.iface.messageBar().pushMessage(error_message)
+                return
+        walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
+        if walkingtime_index == 0:
+            max_walking_time = 17 * 60  # minutes in seconds
+        elif walkingtime_index == 1:
+            input = self.dlg.le_max_walking_time.text()
+            try:
+                max_walking_time = int(input) * 60  # minutes in seconds
+            except ValueError:
+                error_message = "The max_walking_time has to be an integer" + "\n"
+                self.iface.messageBar().pushMessage(error_message)
+        poi = Request(
+            lat=self.dlg.le_lat_of_start_end.text(),
+            lon=self.dlg.le_lon_of_start_end.text(),
+            day=self.dlg.le_date.text(),
+            time_start=self.dlg.le_time_start.text(),
+            time_end=self.dlg.le_time_end.text(),
+            walk_speed=walk_speed,
+            max_walking_time=max_walking_time,
+            layer_name=layer_name,
+            filepath=filepath
+        )
+        if poi.incorrect_input:
+            self.iface.messageBar().pushMessage(poi.error_message)
+            return
+        return poi
+
     def create_dataframe_with_station_attributes(self, station_collection, poi:Request = None):
         """
         Codes of the negative numbers:
@@ -636,7 +684,7 @@ class PublicTransitAnalysis:
         for station in station_collection:
             station.calculate_travel_time_ratio(start, "start")
 
-    def export_stops_as_geopackage(self, stop_collection, filepath, layer_name, poi:Request = None):
+    def export_stops_as_geopackage(self, stop_collection, poi:Request):
         lat_collection = []
         lon_collection = []
         if poi is not None:
@@ -652,10 +700,10 @@ class PublicTransitAnalysis:
         station_attributes = self.create_dataframe_for_stop_objects(stop_collection, poi=poi)
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(lon_collection, lat_collection), crs="EPSG:4326")
-        gdf.to_file(filepath, driver='GPKG', layer=layer_name)
-        layer = QgsVectorLayer(filepath, layer_name, "ogr")  # TODO funktioniert das so?
+        gdf.to_file(poi.filepath, driver='GPKG', layer=poi.layer_name)
+        layer = QgsVectorLayer(poi.filepath, poi.layer_name, "ogr")  # TODO funktioniert das so?
         QgsProject.instance().addMapLayer(layer)
-    def export_stations_as_geopackage(self, station_collection, filepath, layer_name, poi:Request=None):
+    def export_stations_as_geopackage(self, station_collection, poi:Request):
         mean_lat_collection = []
         mean_lon_collection = []
         if poi is not None:
@@ -671,123 +719,82 @@ class PublicTransitAnalysis:
         station_attributes = self.create_dataframe_with_station_attributes(station_collection, poi=poi)
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(mean_lon_collection, mean_lat_collection), crs="EPSG:4326")
-        gdf.to_file(filepath, driver='GPKG', layer=layer_name)
-        layer = QgsVectorLayer(filepath, layer_name, "ogr") #TODO funktioniert das so?
+        gdf.to_file(poi.filepath, driver='GPKG', layer=poi.layer_name)
+        layer = QgsVectorLayer(poi.filepath, poi.layer_name, "ogr") #TODO funktioniert das so?
         QgsProject.instance().addMapLayer(layer)
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
-        # copied from itineraries_data_from_otp_to_geopackage
-        layer_name = self.dlg.le_layer_name.text()  # TODO co ntrole, that the name is usable as filename
-        if self.dlg.le_filepath_itineraries.text() is not None:
-            filepath = self.dlg.le_filepath_itineraries.text()
-        else:
-            self.iface.messageBar().pushMessage("The filepath has to be selected first")
-            return
-        walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
-        if walkspeed_index == 0:
-            walk_speed = 2 / 3.6
-        elif walkspeed_index == 1:
-            walk_speed = 4 / 3.6
-        elif walkspeed_index == 2:
-            walk_speed = 6 / 3.6
-        elif walkspeed_index == 3:
-            input = self.dlg.le_personalized_tempo.text()
-            try:
-                walk_speed = float(input) / 3.6
-            except ValueError:
-                error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
-                self.iface.messageBar().pushMessage(error_message)
-                return
-        walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
-        if walkingtime_index == 0:
-            max_walking_time = 17 * 60  # minutes in seconds
-        elif walkingtime_index == 1:
-            input = self.dlg.le_max_walking_time.text()
-            try:
-                max_walking_time = int(input) * 60  # minutes in seconds
-            except ValueError:
-                error_message = "The max_walking_time has to be an integer" + "\n"
-                self.iface.messageBar().pushMessage(error_message)
-        poi = Request(
-            lat=self.dlg.le_lat_of_start_end.text(),
-            lon=self.dlg.le_lon_of_start_end.text(),
-            day=self.dlg.le_date.text(),
-            time_start=self.dlg.le_time_start.text(),
-            time_end=self.dlg.le_time_end.text(),
-            walk_speed=walk_speed,
-            max_walking_time=max_walking_time
-        )
-        if poi.incorrect_input:
-            self.iface.messageBar().pushMessage(poi.error_message)
-            return
-
+        poi = self.create_request_object()
         all_stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
         all_stops = self.create_stop_and_route_objects(all_stops_as_dict)
-        self.export_stops_as_geopackage(all_stops, filepath, layer_name, poi=poi)
+        self.export_stops_as_geopackage(all_stops, poi=poi)
 
 
 
 
 
-    def stations_from_otp_to_gpkg(self, export_to_gpkg=True):
-        stops_as_dict = self.query_all_stops()
-        all_stops = self.create_stop_objects(stops_as_dict)
+    def stations_from_otp_to_gpkg(self):
+        poi = self.create_request_object()
+        #stops_as_dict = self.query_all_stops()
+        stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
+        #all_stops = self.create_stop_objects(stops_as_dict)
+        all_stops = self.create_stop_and_route_objects(stops_as_dict)
         all_stations = self.create_stations(all_stops)
-        if export_to_gpkg:
-            # TODO add filepath elements in GUI
-            self.export_stations_as_geopackage(all_stations, "all_stations_without_itineraries", "all_stations_without_itineraries")
-        else:
-            return all_stations
+        self.export_stations_as_geopackage(all_stations, poi=poi)
 
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
-        all_stations = self.stations_from_otp_to_gpkg(export_to_gpkg=False)
-        layer_name = self.dlg.le_layer_name.text() #TODO co ntrole, that the name is usable as filename
-        if self.dlg.le_filepath_itineraries.text() is not None:
-            filepath = self.dlg.le_filepath_itineraries.text()
-        else:
-            self.iface.messageBar().pushMessage("The filepath has to be selected first")
-            return
-        walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
-        if walkspeed_index == 0:
-            walk_speed = 2/3.6
-        elif walkspeed_index == 1:
-            walk_speed = 4/3.6
-        elif walkspeed_index == 2:
-            walk_speed = 6/3.6
-        elif walkspeed_index == 3:
-            input = self.dlg.le_personalized_tempo.text()
-            try:
-                walk_speed = float(input)/3.6
-            except ValueError:
-                error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
-                self.iface.messageBar().pushMessage(error_message)
-                return
-        walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
-        if walkingtime_index == 0:
-            max_walking_time = 17*60 #minutes in seconds
-        elif walkingtime_index == 1:
-            input = self.dlg.le_max_walking_time.text()
-            try:
-                max_walking_time = int(input)*60 #minutes in seconds
-            except ValueError:
-                error_message = "The max_walking_time has to be an integer" + "\n"
-                self.iface.messageBar().pushMessage(error_message)
+        poi = self.create_request_object()
+        stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
+        all_stops = self.create_stop_and_route_objects(stops_as_dict)
+        all_stations = self.create_stations(all_stops)
+        #all_stations = self.stations_from_otp_to_gpkg(export_to_gpkg=False)
+        # layer_name = self.dlg.le_layer_name.text() #TODO co ntrole, that the name is usable as filename
+        # if self.dlg.le_filepath_itineraries.text() is not None:
+        #     filepath = self.dlg.le_filepath_itineraries.text()
+        # else:
+        #     self.iface.messageBar().pushMessage("The filepath has to be selected first")
+        #     return
+        # walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
+        # if walkspeed_index == 0:
+        #     walk_speed = 2/3.6
+        # elif walkspeed_index == 1:
+        #     walk_speed = 4/3.6
+        # elif walkspeed_index == 2:
+        #     walk_speed = 6/3.6
+        # elif walkspeed_index == 3:
+        #     input = self.dlg.le_personalized_tempo.text()
+        #     try:
+        #         walk_speed = float(input)/3.6
+        #     except ValueError:
+        #         error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
+        #         self.iface.messageBar().pushMessage(error_message)
+        #         return
+        # walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
+        # if walkingtime_index == 0:
+        #     max_walking_time = 17*60 #minutes in seconds
+        # elif walkingtime_index == 1:
+        #     input = self.dlg.le_max_walking_time.text()
+        #     try:
+        #         max_walking_time = int(input)*60 #minutes in seconds
+        #     except ValueError:
+        #         error_message = "The max_walking_time has to be an integer" + "\n"
+        #         self.iface.messageBar().pushMessage(error_message)
 
         if start_or_end_station == "start":
-            start = Request(
-                lat=self.dlg.le_lat_of_start_end.text(),
-                lon=self.dlg.le_lon_of_start_end.text(),
-                day=self.dlg.le_date.text(),
-                time_start=self.dlg.le_time_start.text(),
-                time_end=self.dlg.le_time_end.text(),
-                walk_speed=walk_speed,
-                max_walking_time=max_walking_time
-            )
-            if start.incorrect_input:
-                self.iface.messageBar().pushMessage(start.error_message)
-                return
-            self.create_itineraries_from_start_to_each_station(all_stations[0:20], start)
-            self.export_stations_as_geopackage(all_stations[0:20], filepath, layer_name, poi=start)
+            # start = Request(
+            #     lat=self.dlg.le_lat_of_start_end.text(),
+            #     lon=self.dlg.le_lon_of_start_end.text(),
+            #     day=self.dlg.le_date.text(),
+            #     time_start=self.dlg.le_time_start.text(),
+            #     time_end=self.dlg.le_time_end.text(),
+            #     walk_speed=walk_speed,
+            #     max_walking_time=max_walking_time
+            # )
+            # if start.incorrect_input:
+            #     self.iface.messageBar().pushMessage(start.error_message)
+            #     return
+            self.create_itineraries_from_start_to_each_station(all_stations[0:20], poi)
+            self.export_stations_as_geopackage(all_stations[0:20], poi=poi)
 
         elif start_or_end_station == "end":
             #end = {"lat": lat, "lon":  lon}
@@ -1042,7 +1049,7 @@ class PublicTransitAnalysis:
             self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
-            self.dlg.pb_get_stations_from_otp.clicked.connect(lambda: self.stations_from_otp_to_gpkg(export_to_gpkg=True))
+            self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
             self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
             self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)

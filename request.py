@@ -3,7 +3,7 @@
 from datetime import time, date, datetime
 class Request:
     #TODO how to end the code, if except in try except
-    def __init__(self, lat, lon, day, time_start, time_end, walk_speed, max_walking_time):
+    def __init__(self, lat, lon, day, time_start, time_end, walk_speed, max_walking_time, layer_name, filepath):
         self.__incorrect_input = False
         self.__error_message = ""
         self.lat = lat
@@ -18,6 +18,9 @@ class Request:
         self.__possible_start_stations = []
         self.quality_category = 500
         self.search_window = self.calculate_search_window()
+
+        self.layer_name = layer_name #I dind't make a property and setter method
+        self.filepath = filepath #I dind't make a property and setter method
     #TODO will I use the setter after the construction of an objet again? Then it is not a good idea to do the converting inside the setter
 
     @property
