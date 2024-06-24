@@ -381,6 +381,7 @@ class PublicTransitAnalysis:
                 error_message = "The max_walking_time has to be an integer" + "\n"
                 self.iface.messageBar().pushMessage(error_message)
         poi = Request(
+            #TODO make the try except statements not in the setter, but in this method
             lat=self.dlg.le_lat_of_start_end.text(),
             lon=self.dlg.le_lon_of_start_end.text(),
             day=self.dlg.le_date.text(),
@@ -409,10 +410,11 @@ class PublicTransitAnalysis:
         average_trip_time_collection = [-2]
         car_driving_time_collection = [None]
         travel_time_ratio_collection = [-2]
+
         average_number_of_transfers_collection = [None]
         average_walk_distance_of_trip_collection = [None]
         average_walk_time_collection = [None]
-        trip_frequency_collection = [None]
+        itinerary_frequency_collection = [None]
         selected_itineraries_collection = [None]
         possible_itineraries_collection = [None]
         max_distance_station_to_stop_collection = [None]
@@ -464,7 +466,7 @@ class PublicTransitAnalysis:
                 average_walk_time_collection.append(station.average_walk_time_of_trip/60) #seconds in minutes
             else:
                 average_walk_time_collection.append(station.average_walk_time_of_trip)
-            trip_frequency_collection.append(station.trip_frequency)
+            itinerary_frequency_collection.append(station.itinerary_frequency)
             for itinerary in station.selected_itineraries:
                 data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, walk_distance: {itinerary.walk_distance}, walk_time: {itinerary.walk_time/60}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
                 selected_itineraries_data = selected_itineraries_data + data
@@ -501,7 +503,7 @@ class PublicTransitAnalysis:
                 "Name": name_collection,
                 "travel_time_ratio": travel_time_ratio_collection,
                 "average_number_of_transfers": average_number_of_transfers_collection,
-                "trip_frequency_collection": trip_frequency_collection,
+                "itinerary_frequency_collection": itinerary_frequency_collection,
                 "average_trip_time": average_trip_time_collection,
                 "car_driving_time": car_driving_time_collection,
                 "average_walk_distance": average_walk_distance_of_trip_collection,
@@ -598,7 +600,7 @@ class PublicTransitAnalysis:
         return df
 
 
-    def create_stop_and_route_objects(self, queried_stops):
+    def create_stop_and_route_objects(self, queried_stops, poi):
         stop_objects = []
         for stop in queried_stops:
             route_objects = []
@@ -624,6 +626,7 @@ class PublicTransitAnalysis:
                 for route in route_objects:
                     if route.gtfs_id == route_gtfsId:
                         route.add_departure_time(departure_time)
+                        route.frequency = route.calculate_frequency(poi)
             new_stop = Stop(stop["name"], stop["gtfsId"], stop["lat"], stop["lon"], stop["vehicleMode"], route_objects)
             stop_objects.append(new_stop)
         return stop_objects
@@ -650,17 +653,17 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
         return station_collection
 
-    def create_itineraries_from_start_to_each_station(self, station_collection, start: Request): #date: str, time: str, search_window: int, catchment_area, start: dict):
+    def create_itineraries_from_start_to_each_station(self, station_collection, poi: Request): #date: str, time: str, search_window: int, catchment_area, start: dict):
         #possible_start_coordinates = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
-            station.query_and_create_transit_itineraries(start, "start")
-            station.filter_itineraries_with_permissible_catchment_area("start", start.catchment_area)
-            station.filter_shortest_itinerary()
+            station.query_and_create_transit_itineraries(poi, "start")
+            station.filter_itineraries_with_permissible_catchment_area("start", poi.catchment_area)
             for itinerary in station.itineraries_with_permissible_catchment_area:
-                start.add_possible_start_station(itinerary.start_station)
-            print(f"{item_index}, {station.name}, shortest itinerary calculated; ")
-        start.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
+                poi.add_possible_start_station(itinerary.start_station)
+                itinerary.frequency = itinerary.calculate_frequency(station_collection, poi) #TODO try runtime with and without this function
+            station.filter_shortest_itinerary()
+        poi.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         # get the coordinates of the possible start stations and find max distance
         # max_distance = 0.0
         # for station in station_collection:
@@ -682,7 +685,7 @@ class PublicTransitAnalysis:
         #         station.filter_shortest_itinerary()
         # calculate the travel time ratio
         for station in station_collection:
-            station.calculate_travel_time_ratio(start, "start")
+            station.calculate_travel_time_ratio(poi, "start")
 
     def export_stops_as_geopackage(self, stop_collection, poi:Request):
         lat_collection = []
@@ -726,7 +729,7 @@ class PublicTransitAnalysis:
     def stops_with_departure_times_from_otp_to_gpkg(self):
         poi = self.create_request_object()
         all_stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        all_stops = self.create_stop_and_route_objects(all_stops_as_dict)
+        all_stops = self.create_stop_and_route_objects(all_stops_as_dict, poi)
         self.export_stops_as_geopackage(all_stops, poi=poi)
 
 
@@ -738,63 +741,19 @@ class PublicTransitAnalysis:
         #stops_as_dict = self.query_all_stops()
         stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
         #all_stops = self.create_stop_objects(stops_as_dict)
-        all_stops = self.create_stop_and_route_objects(stops_as_dict)
+        all_stops = self.create_stop_and_route_objects(stops_as_dict, poi)
         all_stations = self.create_stations(all_stops)
         self.export_stations_as_geopackage(all_stations, poi=poi)
 
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
         poi = self.create_request_object()
         stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        all_stops = self.create_stop_and_route_objects(stops_as_dict)
+        all_stops = self.create_stop_and_route_objects(stops_as_dict, poi)
         all_stations = self.create_stations(all_stops)
-        #all_stations = self.stations_from_otp_to_gpkg(export_to_gpkg=False)
-        # layer_name = self.dlg.le_layer_name.text() #TODO co ntrole, that the name is usable as filename
-        # if self.dlg.le_filepath_itineraries.text() is not None:
-        #     filepath = self.dlg.le_filepath_itineraries.text()
-        # else:
-        #     self.iface.messageBar().pushMessage("The filepath has to be selected first")
-        #     return
-        # walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
-        # if walkspeed_index == 0:
-        #     walk_speed = 2/3.6
-        # elif walkspeed_index == 1:
-        #     walk_speed = 4/3.6
-        # elif walkspeed_index == 2:
-        #     walk_speed = 6/3.6
-        # elif walkspeed_index == 3:
-        #     input = self.dlg.le_personalized_tempo.text()
-        #     try:
-        #         walk_speed = float(input)/3.6
-        #     except ValueError:
-        #         error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
-        #         self.iface.messageBar().pushMessage(error_message)
-        #         return
-        # walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
-        # if walkingtime_index == 0:
-        #     max_walking_time = 17*60 #minutes in seconds
-        # elif walkingtime_index == 1:
-        #     input = self.dlg.le_max_walking_time.text()
-        #     try:
-        #         max_walking_time = int(input)*60 #minutes in seconds
-        #     except ValueError:
-        #         error_message = "The max_walking_time has to be an integer" + "\n"
-        #         self.iface.messageBar().pushMessage(error_message)
 
         if start_or_end_station == "start":
-            # start = Request(
-            #     lat=self.dlg.le_lat_of_start_end.text(),
-            #     lon=self.dlg.le_lon_of_start_end.text(),
-            #     day=self.dlg.le_date.text(),
-            #     time_start=self.dlg.le_time_start.text(),
-            #     time_end=self.dlg.le_time_end.text(),
-            #     walk_speed=walk_speed,
-            #     max_walking_time=max_walking_time
-            # )
-            # if start.incorrect_input:
-            #     self.iface.messageBar().pushMessage(start.error_message)
-            #     return
-            self.create_itineraries_from_start_to_each_station(all_stations[0:20], poi)
-            self.export_stations_as_geopackage(all_stations[0:20], poi=poi)
+            self.create_itineraries_from_start_to_each_station(all_stations, poi)
+            self.export_stations_as_geopackage(all_stations, poi=poi)
 
         elif start_or_end_station == "end":
             #end = {"lat": lat, "lon":  lon}

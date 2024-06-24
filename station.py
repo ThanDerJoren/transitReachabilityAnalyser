@@ -38,7 +38,7 @@ class Station:
         self.average_number_of_transfers: float = None
         self.average_walk_distance_of_trip: float = None
         self.average_walk_time_of_trip: float = None
-        self.trip_frequency: float = None
+        self.itinerary_frequency: float = None
         self.queried_itineraries = []
         self.itineraries_with_permissible_catchment_area = []
         self.selected_itineraries = []
@@ -79,11 +79,19 @@ class Station:
                         numberOfTransfers,
                         walkDistance,
                         legs{{
-                            from{{name}}
-                            to{{name}}
-                            distance                            
                             mode
-                            route{{shortName}}
+                            distance                            
+                            from{{ 
+                                name
+                                stop{{gtfsId}}
+                                }}
+                            to{{name
+                                stop{{gtfsId}}
+                                }}
+                            route{{
+                                shortName
+                                gtfsId
+                                }}
                         }}       
                     }}
                 }}
@@ -92,15 +100,18 @@ class Station:
         queriedPlan = requests.post(url, json={"query": plan})
         queriedPlan = json.loads(queriedPlan.content)
         itineraries = queriedPlan["data"]["plan"]["itineraries"]
+
         for element in itineraries:
             modes = []
             route_numbers = []
+            legs = []
             start_station = "" #it needs to be an empty string. If the shortest route is walking, there will be no start station
             end_station = ""
             distance_to_start_station: float
             distance_from_end_station: float
             first_transit_mode = True
             for item in element["legs"]:
+                legs.append(item)
                 modes.append(item["mode"])
                 if first_transit_mode and item["mode"] != "WALK":
                     start_station = item["from"]["name"]
@@ -130,7 +141,8 @@ class Station:
                 distance_to_start_station,
                 distance_from_end_station,
                 modes,
-                route_numbers
+                route_numbers,
+                legs.copy()
             )
             self.queried_itineraries.append(itinerary)
 
@@ -190,7 +202,6 @@ class Station:
         queriedPlan = requests.post(url, json={"query": plan})
         queriedPlan = json.loads(queriedPlan.content)
         for itinerary in queriedPlan["data"]["plan"]["itineraries"]:
-            print(f"car Itinerary:",itinerary["duration"], f"station: {self.name}")
             self.car_driving_time = itinerary["duration"]/60 + 5# seconds in minutes TODO 5 minutes for walking to car and search time
 
     def filter_itineraries_with_permissible_catchment_area(self, start_or_end_station, catchment_area):
@@ -222,6 +233,7 @@ class Station:
             self.average_number_of_transfers = self.selected_itineraries[0].number_of_transfers
             self.average_walk_distance_of_trip = self.selected_itineraries[0].walk_distance
             self.average_walk_time_of_trip = self.selected_itineraries[0].walk_time
+            self.itinerary_frequency = self.selected_itineraries[0].frequency
 
 
     def calculate_travel_time_ratio(self, poi:Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):

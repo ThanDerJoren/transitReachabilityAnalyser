@@ -165,7 +165,6 @@ class Request:
     def add_possible_start_station(self, start_station:str):
         if self.__possible_start_stations.count(start_station) == 0:
             self.__possible_start_stations.append(start_station)
-        print(f"possible_start_stations: {self.__possible_start_stations}" )
 
     def remove_empty_entries_in_possible_start_station(self):
         while "" in self.__possible_start_stations:
