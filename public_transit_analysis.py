@@ -24,9 +24,10 @@
 import math
 
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication #TODO ist QgsVectorLayer an der richtigen Stelle importiert?
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsPalLayerSettings, QgsTextFormat, QgsVectorLayerSimpleLabeling
+from qgis.core import QgsStyle, QgsColorRamp, QgsColorRampShader #for a color ramp
 from datetime import time, date, datetime # Don't delete! I use this for objects form request
 
 # personal imports
@@ -102,11 +103,6 @@ from qgis.core import (
 from qgis.core.additions.edit import edit
 
 
-from qgis.PyQt.QtGui import (
-
-    QColor,
-
-)
 # This is needed to create own graduated symbol renderer
 from qgis.PyQt import QtGui
 
@@ -653,7 +649,7 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
         return station_collection
 
-    def create_itineraries_from_start_to_each_station(self, station_collection, poi: Request): #date: str, time: str, search_window: int, catchment_area, start: dict):
+    def create_itineraries_from_start_to_each_station(self, station_collection, poi: Request, stop_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
         #possible_start_coordinates = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
@@ -661,7 +657,9 @@ class PublicTransitAnalysis:
             station.filter_itineraries_with_permissible_catchment_area("start", poi.catchment_area)
             for itinerary in station.itineraries_with_permissible_catchment_area:
                 poi.add_possible_start_station(itinerary.start_station)
-                itinerary.frequency = itinerary.calculate_frequency(station_collection, poi) #TODO try runtime with and without this function
+                #TODO enable frequency calculation
+                #itinerary.frequency = itinerary.calculate_frequency(station_collection, poi) #TODO try runtime with and without this function
+                #itinerary.frequency = itinerary.calculate_frequency_copy(stop_collection, poi)
             station.filter_shortest_itinerary()
         poi.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         # get the coordinates of the possible start stations and find max distance
@@ -732,10 +730,6 @@ class PublicTransitAnalysis:
         all_stops = self.create_stop_and_route_objects(all_stops_as_dict, poi)
         self.export_stops_as_geopackage(all_stops, poi=poi)
 
-
-
-
-
     def stations_from_otp_to_gpkg(self):
         poi = self.create_request_object()
         #stops_as_dict = self.query_all_stops()
@@ -746,18 +740,21 @@ class PublicTransitAnalysis:
         self.export_stations_as_geopackage(all_stations, poi=poi)
 
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
+        start_time = datetime.now()
         poi = self.create_request_object()
         stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
         all_stops = self.create_stop_and_route_objects(stops_as_dict, poi)
         all_stations = self.create_stations(all_stops)
 
         if start_or_end_station == "start":
-            self.create_itineraries_from_start_to_each_station(all_stations, poi)
+            self.create_itineraries_from_start_to_each_station(all_stations, poi, all_stops)
             self.export_stations_as_geopackage(all_stations, poi=poi)
 
         elif start_or_end_station == "end":
             #end = {"lat": lat, "lon":  lon}
             self.not_implemented_yet()
+        end_time = datetime.now()
+        print('Duration: {}'.format(end_time - start_time))
 
     def select_output_file(self, current_line_edit): #
         filename, _filter = QFileDialog.getSaveFileName(
@@ -790,7 +787,7 @@ class PublicTransitAnalysis:
         lower_limit = -1
         upper_limit = -1
         symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-        black = "#000000"
+        black = "#9b9b9b"
         symbol.setColor(QtGui.QColor(black))
         range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
         range_list.append(range)
@@ -844,7 +841,6 @@ class PublicTransitAnalysis:
         layer.setLabeling(labeler)
         layer.triggerRepaint()
 
-
     def travel_time_symbology(self, layer):
         target_field = "average_trip_time"
         interval_size = 5
@@ -855,14 +851,38 @@ class PublicTransitAnalysis:
         data_collection.sort(reverse=True)
         interval_amount = math.ceil(data_collection[0] / interval_size)
 
-        # create own graduated symbol renderer
-        colour_progression = ['#0000FF', "#013220", "#FFFF00", "#FFA500",
-                              '#800080']  # red: '#FF0000', dark green: #013220
-        colour_gradient = self.create_gradient(colour_progression, interval_amount)
+        """ChatGPT code
+        Request: In der QGIS Python API gibt es die Klasse QgsColorRamp. Ich möchte die ColorRamp Turbo von Qgis erstellen und auf die Hexcodes dieser ColorRamp zugreifen
+        """
+        # Lade den QGIS Stil und hole die Turbo Color Ramp
+        style = QgsStyle.defaultStyle()
+        ramp_name = "Turbo"
+        color_ramp = style.colorRamp(ramp_name)
+
+        if not color_ramp:
+            print(f"Error: Color ramp '{ramp_name}' not found.")
+            return
+        else:
+            # Erstelle eine Liste, um die Hex-Codes zu speichern
+            hex_colors = []
+
+            # Anzahl der Farben, die du extrahieren möchtest
+            num_colors = interval_amount
+
+            for i in range(num_colors):
+                # Bestimme die Position auf der Farbrampe (von 0 bis 1)
+                position = i / (num_colors - 1)
+
+                # Hole die Farbe an dieser Position
+                color = color_ramp.color(position)
+
+                # Konvertiere die Farbe in einen Hex-Code und füge sie der Liste hinzu
+                hex_colors.append(self.get_hex_from_color(color))
+        """end ChatGPT code"""
         range_list = []
         lower_limit = 0.0
         upper_limit = interval_size
-        for index, color in enumerate(colour_gradient):
+        for index, color in enumerate(hex_colors):
             print(f"lower_limit: {lower_limit}")
             print(f"upper_limit: {upper_limit}\n")
             label = f"{lower_limit} - {upper_limit} min."
@@ -871,8 +891,8 @@ class PublicTransitAnalysis:
             # symbol.setColor(QtGui.QColor(color.hex_l))
             # current_opacity = (interval_size-index)/interval_size
             # symbol.setOpacity(opacity/(index+1))
-            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(range)
+            sector = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(sector)
             lower_limit += interval_size
             upper_limit += interval_size
 
@@ -886,6 +906,9 @@ class PublicTransitAnalysis:
 
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
+
+
+
 
 
     def travel_time_ratio_symbology(self, layer):
@@ -925,59 +948,12 @@ class PublicTransitAnalysis:
 
     """
     ChatGPT Code:
-    Request: "Python code: Farbverlauf in beliebig vielen Intervallen als list mit Hex code Farbverlauf: Blau, grün, gelb, rot, Lila"
+    Request: In der QGIS Python API gibt es die Klasse QgsColorRamp. Ich möchte die ColorRamp Turbo von Qgis erstellen und auf die Hexcodes dieser ColorRamp zugreifen
     """
 
-    def hex_to_rgb(self, hex):
-        """Convert hex color to RGB tuple."""
-        hex = hex.lstrip('#')
-        return tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
-
-    def rgb_to_hex(self, rgb):
-        """Convert RGB tuple to hex color."""
-        return '#{:02x}{:02x}{:02x}'.format(*rgb)
-
-    def interpolate_color(self, c1, c2, t, gamma):
-        """
-        Interpolate between two RGB colors with a given ratio t using a gamma adjustment.
-        t_adjusted = t**gamma:
-        The interpolation ratio t is adjusted using the gamma value to achieve a curved interpolation.
-        By raising t to the power of gamma, transitions between colors are either sharpened or softened
-        depending on the value of gamma.
-        """
-
-        t_adjusted = t ** gamma
-        return tuple(int(c1[i] + (c2[i] - c1[i]) * t_adjusted) for i in range(3))
-
-    def create_gradient(self, colors, n_intervals, gamma=1):
-        """
-        Create a gradient with given list of colors and number of intervals using a gamma adjustment.
-
-        Args:
-        colors (list): List of color hex codes representing the gradient stops.
-        n_intervals (int): Number of intervals in the gradient.
-        gamma: This parameter controls the interpolation curve. By using a value greater than 1,
-        you enhance the differences between the colors, making the interpolation non-linear.
-        Essentially, gamma dictates the "intensity" of the transition between the colors.
-        For instance, a gamma value of 2.2 will make the transitions more pronounced.
-
-        Returns:
-        list: List of hex colors representing the gradient.
-        """
-        gradient = []
-        rgb_colors = [self. hex_to_rgb(color) for color in colors]
-        steps_per_segment = n_intervals // (len(colors) - 1)
-
-        for i in range(len(rgb_colors) - 1):
-            for j in range(steps_per_segment):
-                t = j / steps_per_segment
-                color = self. interpolate_color(rgb_colors[i], rgb_colors[i + 1], t, gamma)
-                gradient.append(self. rgb_to_hex(color))
-
-        # Append the last color.
-        gradient.append(colors[-1])
-
-        return gradient
+    def get_hex_from_color(self, color: QColor) -> str:
+        """Convert a QColor to a hex string."""
+        return color.name()
     """
     end of ChatGPT code
     """

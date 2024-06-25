@@ -17,6 +17,7 @@ class Itinerary:
         #print(startStation, endStation, duration, routeNumbers)
 
     def calculate_frequency(self, station_collection, poi):
+        #this seems to be faster (45min)
         all_frequencies = []
         print(f"legs: {self.legs}")
         print("number of legs: ",len(self.legs))
@@ -47,6 +48,31 @@ class Itinerary:
         print(worst_frequency)
         return worst_frequency
 
+    def calculate_frequency_copy(self, stop_collection, poi):
+        #this seems to be slower (longer then 45min)
+        all_frequencies = []
+        print(f"legs: {self.legs}")
+        print("number of legs: ",len(self.legs))
+        for stop in stop_collection:
+            for trip in self.legs:
+                if trip["mode"] != "WALK":  # either walk or a transit mode with frequency
+                    if trip["from"]["stop"]["gtfsId"] == stop.gtfs_id:
+                        for route in stop.related_routes:
+                            if trip["route"]["gtfsId"] == route.gtfs_id:
+                                print(route.frequency)
+                                all_frequencies.append(route.frequency)
+                else:
+                    all_frequencies.append(0.5)  # you can start to walk every half minute
+                    # the unit of all_frequencies is minutes.
+
+
+        print(f"{self.end_station}, frequency: {all_frequencies}")
+        worst_frequency = all_frequencies[0]
+        for frequency in all_frequencies:
+            if worst_frequency < frequency: #frequency: every...minute
+                worst_frequency = frequency
+        print(worst_frequency)
+        return worst_frequency
 
 
 

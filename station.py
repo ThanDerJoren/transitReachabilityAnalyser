@@ -60,7 +60,7 @@ class Station:
         else:
             print("the passed value for start_or_end_station has to be either 'start' or 'end' ")
             return
-
+        #TODO find a good walk reluctance, so more stations are reachable
         plan = f"""
             {{plan(
                 date: {day},
@@ -69,7 +69,7 @@ class Station:
                 to: {{ lat: {end["lat"]}, lon: {end["lon"]}}},
                 transportModes: [{{mode: TRANSIT}}, {{mode: WALK}}]
                 numItineraries: 10
-                walkReluctance: 3.0
+                walkReluctance: 5.0
                 searchWindow: {poi.search_window}
                 walkSpeed: {poi.walk_speed}
                 ){{
