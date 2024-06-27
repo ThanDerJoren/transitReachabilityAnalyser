@@ -205,13 +205,21 @@ class Station:
             self.car_driving_time = itinerary["duration"]/60 + 5# seconds in minutes TODO 5 minutes for walking to car and search time
 
     def filter_itineraries_with_permissible_catchment_area(self, start_or_end_station, catchment_area):
-        if start_or_end_station == "start":
+        # TODO check if this new if-statement works
+        # the allowed walk distance is used over the whole trip
+        if start_or_end_station =="start":
             for itinerary in self.queried_itineraries:
-                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.distance_to_start_station <= catchment_area:
-                    #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
+                if itinerary.walk_distance <= catchment_area:
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
-                if itinerary.distance_to_start_station <= catchment_area and self.name == itinerary.end_station: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
-                    self.itineraries_with_permissible_catchment_area.append(itinerary)
+
+        # the allowed walk distance is ony used for the first walk distance
+        # if start_or_end_station == "start":
+        #     for itinerary in self.queried_itineraries:
+        #         if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.distance_to_start_station <= catchment_area:
+        #             #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
+        #             self.itineraries_with_permissible_catchment_area.append(itinerary)
+        #         if itinerary.distance_to_start_station <= catchment_area and self.name == itinerary.end_station: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
+        #             self.itineraries_with_permissible_catchment_area.append(itinerary)
         elif start_or_end_station == "end":
             for itinerary in self.queried_itineraries:
                 if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.distance_to_start_station <= catchment_area:

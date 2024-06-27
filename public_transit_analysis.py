@@ -23,12 +23,13 @@
 """
 import math
 
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication #TODO ist QgsVectorLayer an der richtigen Stelle importiert?
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant #TODO ist QgsVectorLayer an der richtigen Stelle importiert?
 from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsPalLayerSettings, QgsTextFormat, QgsVectorLayerSimpleLabeling
 from qgis.core import QgsStyle, QgsColorRamp, QgsColorRampShader #for a color ramp
 from qgis.core import QgsLayerTreeLayer, QgsLayerTreeGroup #to load all layers, also those in groups
+from qgis.core import QgsVectorLayerJoinInfo # to join attributes table
 from datetime import time, date, datetime # Don't delete! I use this for objects form request
 
 # personal imports
@@ -408,10 +409,10 @@ class PublicTransitAnalysis:
         car_driving_time_collection = [None]
         travel_time_ratio_collection = [-2]
 
-        average_number_of_transfers_collection = [None]
-        average_walk_distance_of_trip_collection = [None]
-        average_walk_time_collection = [None]
-        itinerary_frequency_collection = [None]
+        average_number_of_transfers_collection = [-2]
+        average_walk_distance_of_trip_collection = [-2]
+        average_walk_time_collection = [-2]
+        itinerary_frequency_collection = [-2]
         selected_itineraries_collection = [None]
         possible_itineraries_collection = [None]
         max_distance_station_to_stop_collection = [None]
@@ -457,13 +458,22 @@ class PublicTransitAnalysis:
                 travel_time_ratio_collection.append(station.travel_time_ratio)
             else:
                 travel_time_ratio_collection.append(-1)
-            average_number_of_transfers_collection.append(station.average_number_of_transfers)
-            average_walk_distance_of_trip_collection.append(station.average_walk_distance_of_trip)
+            if station.average_number_of_transfers is not None:
+                average_number_of_transfers_collection.append(station.average_number_of_transfers)
+            else:
+                average_number_of_transfers_collection.append(-1)
+            if station.average_walk_distance_of_trip is not None:
+                average_walk_distance_of_trip_collection.append(station.average_walk_distance_of_trip)
+            else:
+                average_walk_distance_of_trip_collection.append(-1)
             if station.average_walk_time_of_trip is not None:
                 average_walk_time_collection.append(station.average_walk_time_of_trip/60) #seconds in minutes
             else:
-                average_walk_time_collection.append(station.average_walk_time_of_trip)
-            itinerary_frequency_collection.append(station.itinerary_frequency)
+                average_walk_time_collection.append(-1)
+            if station.itinerary_frequency is not None:
+                itinerary_frequency_collection.append(station.itinerary_frequency)
+            else:
+                itinerary_frequency_collection.append(-1)
             for itinerary in station.selected_itineraries:
                 data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, walk_distance: {itinerary.walk_distance}, walk_time: {itinerary.walk_time/60}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
                 selected_itineraries_data = selected_itineraries_data + data
@@ -499,12 +509,12 @@ class PublicTransitAnalysis:
             {
                 "Name": name_collection,
                 "travel_time_ratio": travel_time_ratio_collection,
-                "average_number_of_transfers": average_number_of_transfers_collection,
-                "itinerary_frequency_collection": itinerary_frequency_collection,
-                "average_trip_time": average_trip_time_collection,
-                "car_driving_time": car_driving_time_collection,
-                "average_walk_distance": average_walk_distance_of_trip_collection,
-                "average_walk_time": average_walk_time_collection,
+                "number_of_transfers": average_number_of_transfers_collection,
+                "itinerary_frequency_[min]": itinerary_frequency_collection,
+                "average_trip_time_[min]": average_trip_time_collection,
+                "car_driving_time_[min]": car_driving_time_collection,
+                "walk_distance_[m]": average_walk_distance_of_trip_collection,
+                "walk_time_[m]": average_walk_time_collection,
                 "selected_itineraries": selected_itineraries_collection,
                 "possible_itineraries": possible_itineraries_collection,
                 "max_distance_station_to_stop": max_distance_station_to_stop_collection,
@@ -773,17 +783,17 @@ class PublicTransitAnalysis:
 
     def set_default_symbology(self):
         root = QgsProject.instance().layerTreeRoot()
-        layer_collection = self.get_all_layers(root)
+        layer_collection = self.get_layers(root, "all")
         layer_index = self.dlg.cb_layer_symbology.currentIndex()
         layer = layer_collection[layer_index]
         symbology_theme = self.dlg.cb_symbology_theme.currentIndex()
 
         if symbology_theme == 0: self.travel_time_symbology(layer)
         elif symbology_theme == 1: self.travel_time_ratio_symbology(layer)
-        elif symbology_theme == 2: self.not_implemented_yet()
+        elif symbology_theme == 2: self.frequency_symbology(layer)
         elif symbology_theme == 3: self.not_implemented_yet()
-        elif symbology_theme == 4: self.not_implemented_yet()
-        elif symbology_theme == 5: self.not_implemented_yet()
+        elif symbology_theme == 4: self.walk_time_symbology(layer)
+        elif symbology_theme == 5: self.walk_distance_symbology(layer)
         elif symbology_theme == 6: self.transfer_symbology(layer)
 
         # if self.dlg.cb_symbology_theme.itemData(2) == "travel_time":
@@ -813,8 +823,10 @@ class PublicTransitAnalysis:
         label = "Point of interest"
         lower_limit = -2
         upper_limit = -2
-        symbol = QgsMarkerSymbol.createSimple({'name': 'square', "size": 4})
-        #symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        if QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
+            symbol = QgsMarkerSymbol.createSimple({'name': 'square', "size": 4})
+        else:
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
         pink = "#fe019a"
         symbol.setColor(QtGui.QColor(pink))
         range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
@@ -859,7 +871,7 @@ class PublicTransitAnalysis:
         layer.triggerRepaint()
 
     def travel_time_symbology(self, layer):
-        target_field = "average_trip_time"
+        target_field = "average_trip_time_[min]"
         interval_size = 5
         data_collection = []
         features = layer.getFeatures()
@@ -876,7 +888,7 @@ class PublicTransitAnalysis:
         for index, color in enumerate(colour_gradient):
             print(f"lower_limit: {lower_limit}")
             print(f"upper_limit: {upper_limit}\n")
-            label = f"{lower_limit} - {upper_limit} min."
+            label = f"{lower_limit}< to ≤{upper_limit} min."
             symbol = QgsSymbol.defaultSymbol(layer.geometryType())
             symbol.setColor(QtGui.QColor(color))
             # symbol.setColor(QtGui.QColor(color.hex_l))
@@ -914,7 +926,7 @@ class PublicTransitAnalysis:
             if index == 5:
                 label = "≥3.8"
             else:
-                label = f"{limits[index]} to <{limits[index+1]}"
+                label = f"{limits[index]}< to ≤{limits[index+1]}"
             lower_limit = limits[index]
             upper_limit = limits[index+1]
             symbol = QgsSymbol.defaultSymbol(layer.geometryType())
@@ -933,13 +945,105 @@ class PublicTransitAnalysis:
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
 
+    def frequency_symbology(self, layer):
+        target_field = "itinerary_frequency_[min]"
+        range_list = []
+        colour_gradient = self.get_colors("PuRd", 7)
+        colour_gradient.reverse()
+        #limits = [0, 5, 8, 10, 15, 20, 30, 40, 60, 120, 1440]
+        limits = [0,5,10,20,40,60,120,1440] #1440min = 1trip per day
+
+        for index, color in enumerate(colour_gradient):
+            if index == 9:
+                label = ">120 min"
+            else:
+                label = f"{limits[index]}< to ≤{limits[index+1]} min frequency" # f"{limits[index+1]} min frequency"
+            lower_limit = limits[index] #exclusive
+            upper_limit = limits[index + 1] #inclusive
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+        range_of_particular_points = self.symbology_for_particular_points(layer)
+        range_list.extend(range_of_particular_points)
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.triggerRepaint()
+
+    def walk_time_symbology(self, layer):
+        target_field = "walk_time_[m]"
+        range_list = []
+        interval_size = 5
+        data_collection = []
+        features = layer.getFeatures()
+        for row in features:
+            data_collection.append(row[target_field])
+        data_collection.sort(reverse=True)
+        interval_amount = math.ceil(data_collection[0] / interval_size)
+        colour_gradient = self.get_colors("Purples", interval_amount)
+        colour_gradient.reverse()
+
+        lower_limit = 0.0
+        upper_limit = interval_size
+        for index, color in enumerate(colour_gradient):
+            label = f"{lower_limit}< to ≤{upper_limit} min walktime"
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+            lower_limit += interval_size
+            upper_limit += interval_size
+        range_of_particular_points = self.symbology_for_particular_points(layer)
+        range_list.extend(range_of_particular_points)
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.triggerRepaint()
+
+    def walk_distance_symbology(self, layer):
+        target_field = "walk_distance_[m]"
+        range_list = []
+        colour_gradient = self.get_colors("Purples", 7)
+        colour_gradient.reverse()
+        limits = [0,100, 200, 300, 500, 750, 1000, 5000]  # 1440min = 1trip per day
+
+        for index, color in enumerate(colour_gradient):
+            if index == 6:
+                label = ">1000m walkdistance"
+            else:
+                label = f"{limits[index]}< to ≤{limits[index + 1]} m walkdistance"  # f"{limits[index+1]} min frequency"
+            lower_limit = limits[index]  # exclusive
+            upper_limit = limits[index + 1]  # inclusive
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+        range_of_particular_points = self.symbology_for_particular_points(layer)
+        range_list.extend(range_of_particular_points)
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.triggerRepaint()
+
+
     def transfer_symbology(self, layer):
-        print("enter transfer symbology")
-        target_field = "average_number_of_transfers"
+        target_field = "number_of_transfers"
         range_list = []
         colour_gradient = self.get_colors("Oranges", 4)
         colour_gradient.reverse()
-        print(colour_gradient)
         limits = [0.0, 0.0, 1.0, 2.0, 100.0]
         for index, color in enumerate(colour_gradient):
             if index == 3:
@@ -962,7 +1066,6 @@ class PublicTransitAnalysis:
 
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
-        print("end of transfer symbology")
 
     """
     ChatGPT Code:
@@ -997,32 +1100,114 @@ class PublicTransitAnalysis:
                 hex_colors.append(self.get_hex_from_color(color))
             return hex_colors
 
-    """Request: Ich greife mit folgendem code auf die QGis Layer zu. Leider werden layer, die in Gruppen liegen nicht angezigt. Wie sieht der Code aus, damit auch layer in Gruppen gefunden werden:"""
+    """Request: Ich greife mit folgendem code auf die QGis Layer zu. Leider werden layer, die in Gruppen liegen nicht angezigt. Wie sieht der Code aus, damit auch layer in Gruppen gefunden werden:
+    Request2: im folgenden code werden alle Layer in eine Combobox geladen. Ich möchte jetzt nur point layer in eine Combobox laden. Was muss ich ändern? Kommentare im Code bitte auf Englisch:"""
 
-    def get_all_layers(self, root):
+    def get_layers(self, root, layer_type="all"):
         layers = []
         nodes = root.children()
 
         for node in nodes:
             if isinstance(node, QgsLayerTreeLayer):
-                # Wenn der Knoten ein Layer ist, hinzufügen
-                layers.append(node.layer())
+                layer = node.layer()
+                # Check if the layer is a vector layer before filtering for geometry type
+                if isinstance(layer, QgsVectorLayer):
+                    # Filter layers based on the specified layer_type
+                    if layer_type == "all" or \
+                            (layer_type == "points" and layer.geometryType() == QgsWkbTypes.PointGeometry) or \
+                            (layer_type == "polygons" and layer.geometryType() == QgsWkbTypes.PolygonGeometry):
+                        layers.append(layer)
             elif isinstance(node, QgsLayerTreeGroup):
-                # Wenn der Knoten eine Gruppe ist, rekursiv durch die Gruppen gehen
-                layers.extend(self.get_all_layers(node))
+                # If the node is a group, recursively get layers from the group
+                layers.extend(self.get_layers(node, layer_type))
 
         return layers
-    def load_layers_in_combobox(self):
+
+    def load_layers_in_combobox(self, layer_type="all"):
         # Fetch the currently loaded layers including those in groups
         root = QgsProject.instance().layerTreeRoot()
-        all_layers = self.get_all_layers(root)
-
+        all_layers = self.get_layers(root, "all")
         # Clear the contents of the comboBox from previous runs
         self.dlg.cb_layer_symbology.clear()
-
-        # Populate the comboBox with names of all the loaded layers
+        # Populate the comboBox with names of the specified type of layers
         self.dlg.cb_layer_symbology.addItems([layer.name() for layer in all_layers])
 
+        point_layers = self.get_layers(root, "points")
+        self.dlg.cb_point_layer.clear()
+        self.dlg.cb_point_layer.addItems([layer.name() for layer in point_layers])
+
+        polygon_layers = self.get_layers(root, "polygons")
+        self.dlg.cb_polygon_layer.clear()
+        self.dlg.cb_polygon_layer.addItems([layer.name() for layer in polygon_layers])
+
+    """Request: Ich habe einen Punktlayer in QGis mit einer Attributentabelle. 
+    Ich habe ein Polygonlayer mit einer Attributentabelle. Beide Layer haben eine Spalte die exakt gleich ist. 
+    Ich möchte die Attributentabelle von dem Punktlayer in die Attributentabelle von dem Polygonalyer kopieren, 
+    anhand der übereinstimmenden spalte. Wie mache ich das?"""
+
+    def join_attributes_point_to_isochrone_layer(self):
+        """ TODO: you get the following error, but if you ignor it, the atributes are in the isochrone layer saved:
+        Änderung der Objektkennung des Objekts 288 ist nicht erlaubt
+        Modification of the object ID of object 288 is not allowed."""
+
+        root = QgsProject.instance().layerTreeRoot()
+        points_layer_collection = self.get_layers(root, "points")
+        layer_index = self.dlg.cb_point_layer.currentIndex()
+        point_layer = points_layer_collection[layer_index]
+        polygons_layer_collection = self.get_layers(root, "polygons")
+        layer_index = self.dlg.cb_polygon_layer.currentIndex()
+        polygon_layer = polygons_layer_collection[layer_index]
+
+        if not point_layer or not polygon_layer:
+            print("Layers could not be found in the project.")
+            raise SystemExit
+
+        # Common attribute column (adjust field name as needed)
+        join_field = 'Name'
+
+        # Add attribute fields from point layer to polygon layer
+        point_fields = point_layer.fields()
+        for field in point_fields:
+            if field.name() != join_field:
+                polygon_layer.dataProvider().addAttributes([field])
+                polygon_layer.updateFields()
+
+        # Dictionary for quick lookup of point attributes
+        point_attributes = {}
+        for point in point_layer.getFeatures():
+            key = point[join_field]
+            attributes = point.attributes()
+            point_attributes[key] = attributes
+
+        # Start editing the polygon layer
+        if not polygon_layer.isEditable():
+            polygon_layer.startEditing()
+
+        # Iterate over polygon layer and add attributes
+        for polygon in polygon_layer.getFeatures():
+            key = polygon.attribute(join_field)
+            if key in point_attributes:
+                attrs_to_update = {}
+                for i, attr in enumerate(point_attributes[key]):
+                    attr_name = point_fields[i].name()
+                    field_index = polygon_layer.fields().indexFromName(attr_name)
+                    if field_index != -1:  # Ensure the attribute exists in the polygon layer
+                        attrs_to_update[field_index] = attr
+                # Only update attributes if there are any to update
+                if attrs_to_update:
+                    polygon_layer.dataProvider().changeAttributeValues({polygon.id(): attrs_to_update})
+
+        # Commit changes and save
+        if polygon_layer.commitChanges():
+            print("Changes successfully saved.")
+        else:
+            print("Failed to commit changes.")
+
+        # Optional: Refresh the layer to see the changes in QGIS
+        polygon_layer.triggerRepaint()
+
+        # Add the edited layer to the project (if needed)
+        QgsProject.instance().addMapLayer(polygon_layer)
     """   
     end of ChatGPT code
     """
@@ -1044,7 +1229,6 @@ class PublicTransitAnalysis:
         """Run method that performs all the real work"""
         #console.show_console()
         #print("hallo Welt")
-        self.iface.messageBar().pushMessage("HAllo Welt")
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
@@ -1058,8 +1242,7 @@ class PublicTransitAnalysis:
             #self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
             self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
             self.dlg.pb_reload_layer_cb.clicked.connect(self.load_layers_in_combobox)
-
-            self.dlg.pb_develop_labeling.clicked.connect(self.develop_labeling)
+            self.dlg.pb_join_attributes_point_to_polygon.clicked.connect(self.join_attributes_point_to_isochrone_layer)
 
         self.load_layers_in_combobox()
 
