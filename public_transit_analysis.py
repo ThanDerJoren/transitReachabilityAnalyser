@@ -28,6 +28,7 @@ from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsPalLayerSettings, QgsTextFormat, QgsVectorLayerSimpleLabeling
 from qgis.core import QgsStyle, QgsColorRamp, QgsColorRampShader #for a color ramp
+from qgis.core import QgsLayerTreeLayer, QgsLayerTreeGroup #to load all layers, also those in groups
 from datetime import time, date, datetime # Don't delete! I use this for objects form request
 
 # personal imports
@@ -598,6 +599,7 @@ class PublicTransitAnalysis:
 
     def create_stop_and_route_objects(self, queried_stops, poi):
         stop_objects = []
+        all_routes = []
         for stop in queried_stops:
             route_objects = []
             # first I have to create an object of all possible routes
@@ -611,7 +613,7 @@ class PublicTransitAnalysis:
                     if route.gtfs_id == route_gtfsId:
                         route_already_created = True
                 if not(route_already_created):
-                    obj = Route(route_gtfsId, route_shortName)
+                    obj = Route(route_gtfsId, route_shortName, stop["gtfsId"])
                     route_objects.append(obj)
             for stop_times in stop["stoptimesWithoutPatterns"]:
                 route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
@@ -623,9 +625,11 @@ class PublicTransitAnalysis:
                     if route.gtfs_id == route_gtfsId:
                         route.add_departure_time(departure_time)
                         route.frequency = route.calculate_frequency(poi)
+                        all_routes.append(route)
             new_stop = Stop(stop["name"], stop["gtfsId"], stop["lat"], stop["lon"], stop["vehicleMode"], route_objects)
             stop_objects.append(new_stop)
-        return stop_objects
+        print(f"length of all_routes list: {len(all_routes)}")
+        return stop_objects, all_routes
 
     def create_stop_objects(self, queried_stops):
         stop_objects = []
@@ -649,7 +653,7 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
         return station_collection
 
-    def create_itineraries_from_start_to_each_station(self, station_collection, poi: Request, stop_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
+    def create_itineraries_from_start_to_each_station(self, station_collection, poi: Request, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
         #possible_start_coordinates = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
@@ -657,9 +661,7 @@ class PublicTransitAnalysis:
             station.filter_itineraries_with_permissible_catchment_area("start", poi.catchment_area)
             for itinerary in station.itineraries_with_permissible_catchment_area:
                 poi.add_possible_start_station(itinerary.start_station)
-                #TODO enable frequency calculation
-                #itinerary.frequency = itinerary.calculate_frequency(station_collection, poi) #TODO try runtime with and without this function
-                #itinerary.frequency = itinerary.calculate_frequency_copy(stop_collection, poi)
+                itinerary.frequency = itinerary.calculate_frequency_iterate_directly_through_routes(route_collection)
             station.filter_shortest_itinerary()
         poi.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         # get the coordinates of the possible start stations and find max distance
@@ -727,7 +729,7 @@ class PublicTransitAnalysis:
     def stops_with_departure_times_from_otp_to_gpkg(self):
         poi = self.create_request_object()
         all_stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        all_stops = self.create_stop_and_route_objects(all_stops_as_dict, poi)
+        all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, poi)
         self.export_stops_as_geopackage(all_stops, poi=poi)
 
     def stations_from_otp_to_gpkg(self):
@@ -735,7 +737,7 @@ class PublicTransitAnalysis:
         #stops_as_dict = self.query_all_stops()
         stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
         #all_stops = self.create_stop_objects(stops_as_dict)
-        all_stops = self.create_stop_and_route_objects(stops_as_dict, poi)
+        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, poi)
         all_stations = self.create_stations(all_stops)
         self.export_stations_as_geopackage(all_stations, poi=poi)
 
@@ -743,11 +745,11 @@ class PublicTransitAnalysis:
         start_time = datetime.now()
         poi = self.create_request_object()
         stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        all_stops = self.create_stop_and_route_objects(stops_as_dict, poi)
+        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, poi)
         all_stations = self.create_stations(all_stops)
 
         if start_or_end_station == "start":
-            self.create_itineraries_from_start_to_each_station(all_stations, poi, all_stops)
+            self.create_itineraries_from_start_to_each_station(all_stations, poi, all_routes)
             self.export_stations_as_geopackage(all_stations, poi=poi)
 
         elif start_or_end_station == "end":
@@ -770,15 +772,30 @@ class PublicTransitAnalysis:
                 self.dlg.le_layer_name.setText(layer_name)
 
     def set_default_symbology(self):
-        layer_collection = QgsProject.instance().layerTreeRoot().children()
+        root = QgsProject.instance().layerTreeRoot()
+        layer_collection = self.get_all_layers(root)
         layer_index = self.dlg.cb_layer_symbology.currentIndex()
-        layer = layer_collection[layer_index].layer()
+        layer = layer_collection[layer_index]
+        symbology_theme = self.dlg.cb_symbology_theme.currentIndex()
 
-        if self.dlg.rb_travel_time_transit.isChecked():
-            self.travel_time_symbology(layer)
-        elif self.dlg.rb_travel_time_ratio_transit_to_car.isChecked():
-            self.travel_time_ratio_symbology(layer)
-        self.develop_labeling()
+        if symbology_theme == 0: self.travel_time_symbology(layer)
+        elif symbology_theme == 1: self.travel_time_ratio_symbology(layer)
+        elif symbology_theme == 2: self.not_implemented_yet()
+        elif symbology_theme == 3: self.not_implemented_yet()
+        elif symbology_theme == 4: self.not_implemented_yet()
+        elif symbology_theme == 5: self.not_implemented_yet()
+        elif symbology_theme == 6: self.transfer_symbology(layer)
+
+        # if self.dlg.cb_symbology_theme.itemData(2) == "travel_time":
+        #     self.travel_time_symbology(layer)
+        # else:
+        #     print("hat nicht funktioniert")
+
+        # if self.dlg.rb_travel_time_transit.isChecked():
+        #     self.travel_time_symbology(layer)
+        # elif self.dlg.rb_travel_time_ratio_transit_to_car.isChecked():
+        #     self.travel_time_ratio_symbology(layer)
+        #self.develop_labeling()
 
     def symbology_for_particular_points(self, layer):
         range_list = []
@@ -851,38 +868,12 @@ class PublicTransitAnalysis:
         data_collection.sort(reverse=True)
         interval_amount = math.ceil(data_collection[0] / interval_size)
 
-        """ChatGPT code
-        Request: In der QGIS Python API gibt es die Klasse QgsColorRamp. Ich möchte die ColorRamp Turbo von Qgis erstellen und auf die Hexcodes dieser ColorRamp zugreifen
-        """
-        # Lade den QGIS Stil und hole die Turbo Color Ramp
-        style = QgsStyle.defaultStyle()
-        ramp_name = "Turbo"
-        color_ramp = style.colorRamp(ramp_name)
+        colour_gradient = self.get_colors("Turbo", interval_amount)
 
-        if not color_ramp:
-            print(f"Error: Color ramp '{ramp_name}' not found.")
-            return
-        else:
-            # Erstelle eine Liste, um die Hex-Codes zu speichern
-            hex_colors = []
-
-            # Anzahl der Farben, die du extrahieren möchtest
-            num_colors = interval_amount
-
-            for i in range(num_colors):
-                # Bestimme die Position auf der Farbrampe (von 0 bis 1)
-                position = i / (num_colors - 1)
-
-                # Hole die Farbe an dieser Position
-                color = color_ramp.color(position)
-
-                # Konvertiere die Farbe in einen Hex-Code und füge sie der Liste hinzu
-                hex_colors.append(self.get_hex_from_color(color))
-        """end ChatGPT code"""
         range_list = []
         lower_limit = 0.0
         upper_limit = interval_size
-        for index, color in enumerate(hex_colors):
+        for index, color in enumerate(colour_gradient):
             print(f"lower_limit: {lower_limit}")
             print(f"upper_limit: {upper_limit}\n")
             label = f"{lower_limit} - {upper_limit} min."
@@ -906,10 +897,6 @@ class PublicTransitAnalysis:
 
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
-
-
-
-
 
     def travel_time_ratio_symbology(self, layer):
         target_field = "travel_time_ratio"
@@ -946,6 +933,37 @@ class PublicTransitAnalysis:
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
 
+    def transfer_symbology(self, layer):
+        print("enter transfer symbology")
+        target_field = "average_number_of_transfers"
+        range_list = []
+        colour_gradient = self.get_colors("Oranges", 4)
+        colour_gradient.reverse()
+        print(colour_gradient)
+        limits = [0.0, 0.0, 1.0, 2.0, 100.0]
+        for index, color in enumerate(colour_gradient):
+            if index == 3:
+                label = "≥3"
+            else:
+                label = f"{index} transfers"
+            lower_limit = limits[index] #exclusive
+            upper_limit = limits[index + 1] #inclusive
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+        range_of_particular_points = self.symbology_for_particular_points(layer)
+        range_list.extend(range_of_particular_points)
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.triggerRepaint()
+        print("end of transfer symbology")
+
     """
     ChatGPT Code:
     Request: In der QGIS Python API gibt es die Klasse QgsColorRamp. Ich möchte die ColorRamp Turbo von Qgis erstellen und auf die Hexcodes dieser ColorRamp zugreifen
@@ -954,7 +972,58 @@ class PublicTransitAnalysis:
     def get_hex_from_color(self, color: QColor) -> str:
         """Convert a QColor to a hex string."""
         return color.name()
-    """
+
+    def get_colors(self, ramp_name, num_colors):
+        # Lade den QGIS Stil und hole die Turbo Color Ramp
+        style = QgsStyle.defaultStyle()
+        #ramp_name = "Turbo"
+        color_ramp = style.colorRamp(ramp_name)
+
+        if not color_ramp:
+            print(f"Error: Color ramp '{ramp_name}' not found.")
+            return
+        else:
+            # Erstelle eine Liste, um die Hex-Codes zu speichern
+            hex_colors = []
+
+            for i in range(num_colors):
+                # Bestimme die Position auf der Farbrampe (von 0 bis 1)
+                position = i / (num_colors - 1)
+
+                # Hole die Farbe an dieser Position
+                color = color_ramp.color(position)
+
+                # Konvertiere die Farbe in einen Hex-Code und füge sie der Liste hinzu
+                hex_colors.append(self.get_hex_from_color(color))
+            return hex_colors
+
+    """Request: Ich greife mit folgendem code auf die QGis Layer zu. Leider werden layer, die in Gruppen liegen nicht angezigt. Wie sieht der Code aus, damit auch layer in Gruppen gefunden werden:"""
+
+    def get_all_layers(self, root):
+        layers = []
+        nodes = root.children()
+
+        for node in nodes:
+            if isinstance(node, QgsLayerTreeLayer):
+                # Wenn der Knoten ein Layer ist, hinzufügen
+                layers.append(node.layer())
+            elif isinstance(node, QgsLayerTreeGroup):
+                # Wenn der Knoten eine Gruppe ist, rekursiv durch die Gruppen gehen
+                layers.extend(self.get_all_layers(node))
+
+        return layers
+    def load_layers_in_combobox(self):
+        # Fetch the currently loaded layers including those in groups
+        root = QgsProject.instance().layerTreeRoot()
+        all_layers = self.get_all_layers(root)
+
+        # Clear the contents of the comboBox from previous runs
+        self.dlg.cb_layer_symbology.clear()
+
+        # Populate the comboBox with names of all the loaded layers
+        self.dlg.cb_layer_symbology.addItems([layer.name() for layer in all_layers])
+
+    """   
     end of ChatGPT code
     """
 
@@ -986,17 +1055,20 @@ class PublicTransitAnalysis:
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
-            self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
+            #self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
             self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
+            self.dlg.pb_reload_layer_cb.clicked.connect(self.load_layers_in_combobox)
 
             self.dlg.pb_develop_labeling.clicked.connect(self.develop_labeling)
 
-        # Fetch the currently loaded layers
-        layers = QgsProject.instance().layerTreeRoot().children() #Attention this can't go into a layer group
-        # Clear the contents of the comboBox from previous runs
-        self.dlg.cb_layer_symbology.clear()
-        # Populate the comboBox with names of all the loaded layers
-        self.dlg.cb_layer_symbology.addItems([layer.name() for layer in layers])
+        self.load_layers_in_combobox()
+
+        # # Fetch the currently loaded layers
+        # layers = QgsProject.instance().layerTreeRoot().children() #Attention this can't go into a layer group
+        # # Clear the contents of the comboBox from previous runs
+        # self.dlg.cb_layer_symbology.clear()
+        # # Populate the comboBox with names of all the loaded layers
+        # self.dlg.cb_layer_symbology.addItems([layer.name() for layer in layers])
 
         # show the dialog
         self.dlg.show()

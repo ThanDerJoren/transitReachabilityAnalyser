@@ -1,9 +1,10 @@
 from datetime import time, datetime
 from .request import Request
 class Route:
-    def __init__(self, gtfsId, shortName):
+    def __init__(self, gtfsId, shortName, stopId):
         self.gtfs_id = gtfsId
         self.short_name = shortName
+        self.related_stop_gtfs_id = stopId
         self.__frequency = None
         self.__departure_times = [] #only the departures between poi.time_start to poi.time_end
 
