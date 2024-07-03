@@ -345,15 +345,6 @@ class PublicTransitAnalysis:
         else:
             print("stops could not be queried because OTP is not reachable")
 
-    def query_all_stops(self):
-        if self.check_grizzly_server_is_running():
-            url = self.get_request_url()
-            queried_stops = requests.post(url, json={"query": "{stops{name, gtfsId, lat, lon, vehicleMode}}"})
-            queried_stops = json.loads(queried_stops.content)
-            queried_stops = queried_stops["data"]["stops"]
-            return queried_stops
-        else:
-            print("stops could not be queried because OTP is not reachable")
 
     def create_request_object(self):
         layer_name = self.dlg.le_layer_name.text()  # TODO co ntrole, that the name is usable as filename
@@ -404,7 +395,7 @@ class PublicTransitAnalysis:
             return
         return poi
 
-    def create_dataframe_with_station_attributes(self, station_collection, poi:Request = None):
+    def create_dataframe_with_station_attributes(self, station_collection, poi:Request):
         """
         Codes of the negative numbers:
         -1: there is no Itinerary to/from this station -> not reachable
@@ -437,19 +428,19 @@ class PublicTransitAnalysis:
         quality_category_collection = [None]
 
 
-        if poi is not None:
-            start_station_data = ""
-            date_collection[0] = poi.day.isoformat()
-            time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
-            time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
-            walk_speed_collection[0] = poi.walk_speed*3.6
-            max_walking_time_collection[0] = poi.max_walking_time/60
-            catchment_area_collection[0] = poi.catchment_area
-            for start_station in poi.get_possible_start_stations():
-                data = start_station + ", "
-                start_station_data = start_station_data + data
-            possible_start_stations_collection[0] = start_station_data
-            quality_category_collection[0] = poi.get_letter_of_quality_category()
+
+        start_station_data = ""
+        date_collection[0] = poi.day.isoformat()
+        time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
+        time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
+        walk_speed_collection[0] = poi.walk_speed*3.6
+        max_walking_time_collection[0] = poi.max_walking_time/60
+        catchment_area_collection[0] = poi.catchment_area
+        for start_station in poi.get_possible_start_stations():
+            data = start_station + ", "
+            start_station_data = start_station_data + data
+        possible_start_stations_collection[0] = start_station_data
+        quality_category_collection[0] = poi.get_letter_of_quality_category()
 
 
 
@@ -496,23 +487,16 @@ class PublicTransitAnalysis:
             possible_itineraries_collection.append(possible_itineraries_data)
             max_distance_station_to_stop_collection.append(station.max_distance_station_to_stop)
 
-            if poi is not None:
-                date_collection.append(poi.day.isoformat())
-                time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
-                time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
-                walk_speed_collection.append(poi.walk_speed*3.6)
-                max_walking_time_collection.append(poi.max_walking_time/60)
-                catchment_area_collection.append(poi.catchment_area)
-                quality_category_collection.append(None)
 
-            else:
-                date_collection.append(None)
-                time_start_collection.append(None)
-                time_end_collection.append(None)
-                walk_speed_collection.append(None)
-                max_walking_time_collection.append(None)
-                catchment_area_collection.append(None)
-                quality_category_collection.append(None)
+            date_collection.append(poi.day.isoformat())
+            time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
+            time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
+            walk_speed_collection.append(poi.walk_speed*3.6)
+            max_walking_time_collection.append(poi.max_walking_time/60)
+            catchment_area_collection.append(poi.catchment_area)
+            quality_category_collection.append(None)
+
+
 
         df = pd.DataFrame(
             {
@@ -540,7 +524,7 @@ class PublicTransitAnalysis:
         )
         return df
 
-    def create_dataframe_for_stop_objects(self, stop_collection, poi:Request=None):
+    def create_dataframe_for_stop_objects(self, stop_collection, poi:Request):
         name_collection = ["Point of Interest"]
         gtfs_id_collection = [None]
         vehicle_mode_collection = [None]
@@ -556,19 +540,19 @@ class PublicTransitAnalysis:
         possible_start_stations_collection = [None]
         quality_category_collection = [None]
 
-        if poi is not None:
-            start_station_data = ""
-            date_collection[0] = poi.day.isoformat()
-            time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
-            time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
-            walk_speed_collection[0] = poi.walk_speed * 3.6
-            max_walking_time_collection[0] = poi.max_walking_time / 60
-            catchment_area_collection[0] = poi.catchment_area
-            for start_station in poi.get_possible_start_stations():
-                data = start_station + ", "
-                start_station_data = start_station_data + data
-            possible_start_stations_collection[0] = start_station_data
-            quality_category_collection[0] = poi.get_letter_of_quality_category()
+
+        start_station_data = ""
+        date_collection[0] = poi.day.isoformat()
+        time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
+        time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
+        walk_speed_collection[0] = poi.walk_speed * 3.6
+        max_walking_time_collection[0] = poi.max_walking_time / 60
+        catchment_area_collection[0] = poi.catchment_area
+        for start_station in poi.get_possible_start_stations():
+            data = start_station + ", "
+            start_station_data = start_station_data + data
+        possible_start_stations_collection[0] = start_station_data
+        quality_category_collection[0] = poi.get_letter_of_quality_category()
 
         for stop in stop_collection:
             departure_data = ""
@@ -582,23 +566,23 @@ class PublicTransitAnalysis:
                 data = f"{route.short_name}: {departure_times} \n"
                 departure_data = departure_data + data
             related_routes_collection.append(departure_data)
-            if poi is not None:
-                date_collection.append(poi.day.isoformat())
-                time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
-                time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
-                walk_speed_collection.append(poi.walk_speed*3.6)
-                max_walking_time_collection.append(poi.max_walking_time/60)
-                catchment_area_collection.append(poi.catchment_area)
-                quality_category_collection.append(None)
 
-            else:
-                date_collection.append(None)
-                time_start_collection.append(None)
-                time_end_collection.append(None)
-                walk_speed_collection.append(None)
-                max_walking_time_collection.append(None)
-                catchment_area_collection.append(None)
-                quality_category_collection.append(None)
+            date_collection.append(poi.day.isoformat())
+            time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
+            time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
+            walk_speed_collection.append(poi.walk_speed*3.6)
+            max_walking_time_collection.append(poi.max_walking_time/60)
+            catchment_area_collection.append(poi.catchment_area)
+            quality_category_collection.append(None)
+
+
+            date_collection.append(None)
+            time_start_collection.append(None)
+            time_end_collection.append(None)
+            walk_speed_collection.append(None)
+            max_walking_time_collection.append(None)
+            catchment_area_collection.append(None)
+            quality_category_collection.append(None)
         df = pd.DataFrame(
             {
                 "name": name_collection,
@@ -650,13 +634,6 @@ class PublicTransitAnalysis:
         print(f"length of all_routes list: {len(all_routes)}")
         return stop_objects, all_routes
 
-    def create_stop_objects(self, queried_stops):
-        stop_objects = []
-        for data in queried_stops:
-            stop = Stop(data["name"], data["gtfsId"], data["lat"], data["lon"], data["vehicleMode"])
-            stop_objects.append(stop)
-        return stop_objects.copy()
-
     def create_stations(self, stop_collection):
         station_collection = []
         current_stop_name = stop_collection[0].name
@@ -683,26 +660,6 @@ class PublicTransitAnalysis:
                 itinerary.frequency = itinerary.calculate_frequency_iterate_directly_through_routes(route_collection)
             station.filter_shortest_itinerary()
         poi.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
-        # get the coordinates of the possible start stations and find max distance
-        # max_distance = 0.0
-        # for station in station_collection:
-        #     for start_station in start.get_possible_start_stations():
-        #         if station.name == start_station:
-        #             start_coordinates = {"lat": station.mean_lat, "lon": station.mean_lon}
-        #             possible_start_coordinates.append(start_coordinates)
-        #             station.calculate_max_distance_station_to_stop()
-        #             if station.max_distance_station_to_stop > max_distance:
-        #                 max_distance = station.max_distance_station_to_stop
-        # second try: find an itinerary explicit from the possible_start_stations to all stations, which weren't reached in the first try
-        # TODO is this even necessery? or is this not find any additional itinerary?
-        # for station in station_collection:
-        #     if len(station.itineraries_with_permissible_catchment_area) == 0:
-        #         station.queried_itineraries.clear()
-        #         for start_coordinate in possible_start_coordinates:
-        #             station.query_and_create_transit_itineraries(start, "start")
-        #         station.filter_itineraries_with_permissible_catchment_area("start", max_distance)
-        #         station.filter_shortest_itinerary()
-        # calculate the travel time ratio
         for station in station_collection:
             station.calculate_travel_time_ratio(poi, "start")
 
@@ -753,9 +710,7 @@ class PublicTransitAnalysis:
 
     def stations_from_otp_to_gpkg(self):
         poi = self.create_request_object()
-        #stops_as_dict = self.query_all_stops()
         stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        #all_stops = self.create_stop_objects(stops_as_dict)
         all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, poi)
         all_stations = self.create_stations(all_stops)
         self.export_stations_as_geopackage(all_stations, poi=poi)
@@ -802,7 +757,7 @@ class PublicTransitAnalysis:
         else:
 
             return QgsSymbol.defaultSymbol(layer.geometryType())
-
+        
 
     def set_default_symbology(self):
         root = QgsProject.instance().layerTreeRoot()
@@ -811,13 +766,13 @@ class PublicTransitAnalysis:
         layer = layer_collection[layer_index]
         symbology_theme = self.dlg.cb_symbology_theme.currentIndex()
 
-        if symbology_theme == 0: self.travel_time_symbology(layer)
-        elif symbology_theme == 1: self.travel_time_ratio_symbology(layer)
-        elif symbology_theme == 2: self.frequency_symbology(layer)
+        if symbology_theme == 0: self.symbology_travel_time(layer)
+        elif symbology_theme == 1: self.symbology_travel_time_ratio(layer)
+        elif symbology_theme == 2: self.symbology_frequency(layer)
         elif symbology_theme == 3: self.not_implemented_yet()
-        elif symbology_theme == 4: self.walk_time_symbology(layer)
-        elif symbology_theme == 5: self.walk_distance_symbology(layer)
-        elif symbology_theme == 6: self.transfer_symbology(layer)
+        elif symbology_theme == 4: self.symbology_walk_time(layer)
+        elif symbology_theme == 5: self.symbology_walk_distance(layer)
+        elif symbology_theme == 6: self.symbology_transfer(layer)
 
         # if self.dlg.cb_symbology_theme.itemData(2) == "travel_time":
         #     self.travel_time_symbology(layer)
@@ -867,33 +822,7 @@ class PublicTransitAnalysis:
         # label.writeToLayer(layer)
         return range_list
 
-    def develop_labeling(self):
-        """
-        Maybe I find her an alternative, where I can do more precide settings:
-        https://gis.stackexchange.com/a/469984
-        """
-
-        # #code from here: https://gis.stackexchange.com/a/321029
-        layer_collection = QgsProject.instance().layerTreeRoot().children()
-        layer_index = self.dlg.cb_layer_symbology.currentIndex()
-        layer = layer_collection[layer_index].layer()
-
-        text_format = QgsTextFormat()
-        label = QgsPalLayerSettings()
-        label.fieldName = 'quality_category'
-        label.enabled = True
-        label.setFormat(text_format)
-
-        # --
-        label.placement = QgsPalLayerSettings.Line
-        # --
-
-        labeler = QgsVectorLayerSimpleLabeling(label)
-        layer.setLabelsEnabled(True)
-        layer.setLabeling(labeler)
-        layer.triggerRepaint()
-
-    def travel_time_symbology(self, layer):
+    def symbology_travel_time(self, layer):
         target_field = "average_trip_time_[min]"
         interval_size = 5
         data_collection = []
@@ -935,7 +864,7 @@ class PublicTransitAnalysis:
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
 
-    def travel_time_ratio_symbology(self, layer):
+    def symbology_travel_time_ratio(self, layer):
         target_field = "travel_time_ratio"
 
         darkgreen = "#00b050"
@@ -970,7 +899,7 @@ class PublicTransitAnalysis:
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
 
-    def frequency_symbology(self, layer):
+    def symbology_frequency(self, layer):
         target_field = "itinerary_frequency_[min]"
         range_list = []
         colour_gradient = self.get_colors("PuRd", 7)
@@ -1000,7 +929,7 @@ class PublicTransitAnalysis:
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
 
-    def walk_time_symbology(self, layer):
+    def symbology_walk_time(self, layer):
         target_field = "walk_time_[m]"
         range_list = []
         interval_size = 5
@@ -1034,7 +963,7 @@ class PublicTransitAnalysis:
         layer.setRenderer(trip_time_renderer)
         layer.triggerRepaint()
 
-    def walk_distance_symbology(self, layer):
+    def symbology_walk_distance(self, layer):
         target_field = "walk_distance_[m]"
         range_list = []
         colour_gradient = self.get_colors("Purples", 7)
@@ -1064,7 +993,7 @@ class PublicTransitAnalysis:
         layer.triggerRepaint()
 
 
-    def transfer_symbology(self, layer):
+    def symbology_transfer(self, layer):
         target_field = "number_of_transfers"
         range_list = []
         colour_gradient = self.get_colors("Oranges", 4)
@@ -1148,7 +1077,7 @@ class PublicTransitAnalysis:
 
         return layers
 
-    def load_layers_in_combobox(self, layer_type="all"):
+    def load_layers_in_combobox(self):
         # Fetch the currently loaded layers including those in groups
         root = QgsProject.instance().layerTreeRoot()
         all_layers = self.get_layers(root, "all")
@@ -1167,8 +1096,6 @@ class PublicTransitAnalysis:
 
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
-    def testfunction(self):
-        print(self.check_grizzly_server_is_running())
 
 
 
@@ -1209,4 +1136,4 @@ class PublicTransitAnalysis:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            print("ich schreibe was direkt in die Konsole als Test")
+            self.iface.messageBar().pushMessage("Until next time")
