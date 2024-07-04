@@ -575,14 +575,6 @@ class PublicTransitAnalysis:
             catchment_area_collection.append(poi.catchment_area)
             quality_category_collection.append(None)
 
-
-            date_collection.append(None)
-            time_start_collection.append(None)
-            time_end_collection.append(None)
-            walk_speed_collection.append(None)
-            max_walking_time_collection.append(None)
-            catchment_area_collection.append(None)
-            quality_category_collection.append(None)
         df = pd.DataFrame(
             {
                 "name": name_collection,
@@ -703,6 +695,7 @@ class PublicTransitAnalysis:
         QgsProject.instance().addMapLayer(layer)
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
+        #runtime: about 2s
         start_time = datetime.now()
         poi = self.create_request_object()
         all_stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
@@ -712,11 +705,15 @@ class PublicTransitAnalysis:
         print('Duration: {}'.format(end_time - start_time))
 
     def stations_from_otp_to_gpkg(self):
+        #runtime: about 2s
+        start_time = datetime.now()
         poi = self.create_request_object()
         stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
         all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, poi)
         all_stations = self.create_stations(all_stops)
         self.export_stations_as_geopackage(all_stations, poi=poi)
+        end_time = datetime.now()
+        print('Duration: {}'.format(end_time - start_time))
 
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
         start_time = datetime.now()
