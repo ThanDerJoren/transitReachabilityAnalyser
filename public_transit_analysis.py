@@ -703,10 +703,13 @@ class PublicTransitAnalysis:
         QgsProject.instance().addMapLayer(layer)
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
+        start_time = datetime.now()
         poi = self.create_request_object()
         all_stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
         all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, poi)
         self.export_stops_as_geopackage(all_stops, poi=poi)
+        end_time = datetime.now()
+        print('Duration: {}'.format(end_time - start_time))
 
     def stations_from_otp_to_gpkg(self):
         poi = self.create_request_object()
