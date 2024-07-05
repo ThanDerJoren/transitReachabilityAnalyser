@@ -12,7 +12,7 @@ from datetime import time, date, datetime
 
 from .stop import Stop # used in relatedStops
 from .itinerary import Itinerary
-from .request import Request
+from .referencePoint import ReferencePoint
 import geopy.distance # TODO find an alternative, which is already installed in qgis python
 class Station:
 
@@ -47,16 +47,16 @@ class Station:
         position = {"lat": self.mean_lat, "lon": self.mean_lon}
         return position
 
-    def query_and_create_transit_itineraries(self, poi: Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
-        day = f"\"{poi.day.isoformat()}\""
-        departure = f"\"{poi.time_start.isoformat(timespec='minutes')}\""
+    def query_and_create_transit_itineraries(self, analysis_parameters: ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+        day = f"\"{analysis_parameters.day.isoformat()}\""
+        departure = f"\"{analysis_parameters.time_start.isoformat(timespec='minutes')}\""
 
         if start_or_end_station == "start":
-            start = {"lat": poi.lat, "lon": poi.lon}
+            start = {"lat": analysis_parameters.lat, "lon": analysis_parameters.lon}
             end = self.get_position()
         elif start_or_end_station == "end":
             start = self.get_position()
-            end = {"lat": poi.lat, "lon": poi.lon}
+            end = {"lat": analysis_parameters.lat, "lon": analysis_parameters.lon}
         else:
             print("the passed value for start_or_end_station has to be either 'start' or 'end' ")
             return
@@ -70,8 +70,8 @@ class Station:
                 transportModes: [{{mode: TRANSIT}}, {{mode: WALK}}]
                 numItineraries: 10
                 walkReluctance: 5.0
-                searchWindow: {poi.search_window}
-                walkSpeed: {poi.walk_speed}
+                searchWindow: {analysis_parameters.search_window}
+                walkSpeed: {analysis_parameters.walk_speed}
                 ){{
                     itineraries{{
                         startTime,
@@ -137,7 +137,7 @@ class Station:
                 round(element["duration"]/60), # seconds in minutes
                 element["numberOfTransfers"],
                 element["walkDistance"],
-                element["walkDistance"]/poi.walk_speed,
+                element["walkDistance"]/analysis_parameters.walk_speed,
                 distance_to_start_station,
                 distance_from_end_station,
                 modes,
@@ -175,13 +175,13 @@ class Station:
             return itinerary["walkDistance"]
         #return queriedPlan["data"]["plan"]["itineraries"][0]["walkDistance"]
 
-    def query_and_set_car_driving_time(self, poi:Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"):#start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+    def query_and_set_car_driving_time(self, analysis_parameters:ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"):#start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         if start_or_end_station == "start":
-            start = {"lat": poi.lat, "lon": poi.lon}
+            start = {"lat": analysis_parameters.lat, "lon": analysis_parameters.lon}
             end = self.get_position()
         elif start_or_end_station == "end":
             start = self.get_position()
-            end = {"lat": poi.lat, "lon": poi.lon}
+            end = {"lat": analysis_parameters.lat, "lon": analysis_parameters.lon}
         else:
             print("the passed value for start_or_end_station has to be either 'start' or 'end' ")
             return
@@ -244,8 +244,8 @@ class Station:
             self.itinerary_frequency = self.selected_itineraries[0].frequency
 
 
-    def calculate_travel_time_ratio(self, poi:Request, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
-        self.query_and_set_car_driving_time(poi, start_or_end_station, url=url)
+    def calculate_travel_time_ratio(self, analysis_parameters:ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+        self.query_and_set_car_driving_time(analysis_parameters, start_or_end_station, url=url)
         if self.average_trip_time is not None and self.car_driving_time is not None:
             self.travel_time_ratio = self.average_trip_time/self.car_driving_time
         else:

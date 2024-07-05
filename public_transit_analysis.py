@@ -45,7 +45,7 @@ from console import console
 from .stop import Stop
 from .station import Station
 from .route import Route
-from .request import Request
+from .referencePoint import ReferencePoint
 import sys
 import requests, json
 import geopandas as gpd
@@ -311,9 +311,9 @@ class PublicTransitAnalysis:
             port_number = self.dlg.le_port_number.text()
             return f"http://localhost:{port_number}/otp/gtfs/v1"
 
-    def query_all_stops_incl_departure_times(self, poi:Request):
-        unix_timestamp = int(datetime.timestamp(datetime.combine(poi.day, poi.time_start)))
-        time_range = poi.search_window
+    def query_all_stops_incl_departure_times(self, analysis_parameters:ReferencePoint):
+        unix_timestamp = int(datetime.timestamp(datetime.combine(analysis_parameters.day, analysis_parameters.time_start)))
+        time_range = analysis_parameters.search_window
         plan = f"""
             {{stops {{
                 gtfsId
@@ -378,7 +378,7 @@ class PublicTransitAnalysis:
             except ValueError:
                 error_message = "The max_walking_time has to be an integer" + "\n"
                 self.iface.messageBar().pushMessage(error_message)
-        poi = Request(
+        analysis_parameters = ReferencePoint(
             #TODO make the try except statements not in the setter, but in this method
             lat=self.dlg.le_lat_of_start_end.text(),
             lon=self.dlg.le_lon_of_start_end.text(),
@@ -390,12 +390,12 @@ class PublicTransitAnalysis:
             layer_name=layer_name,
             filepath=filepath
         )
-        if poi.incorrect_input:
-            self.iface.messageBar().pushMessage(poi.error_message)
+        if analysis_parameters.incorrect_input:
+            self.iface.messageBar().pushMessage(analysis_parameters.error_message)
             return
-        return poi
+        return analysis_parameters
 
-    def create_dataframe_with_station_attributes(self, station_collection, poi:Request):
+    def create_dataframe_with_station_attributes(self, station_collection, analysis_parameters:ReferencePoint):
         """
         Codes of the negative numbers:
         -1: there is no Itinerary to/from this station -> not reachable
@@ -417,7 +417,7 @@ class PublicTransitAnalysis:
         possible_itineraries_collection = [None]
         max_distance_station_to_stop_collection = [None]
 
-        #attributes for the poi object
+        #attributes for the analysis_parameters object
         date_collection = [None]
         time_start_collection = [None]
         time_end_collection = [None]
@@ -430,17 +430,17 @@ class PublicTransitAnalysis:
 
 
         start_station_data = ""
-        date_collection[0] = poi.day.isoformat()
-        time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
-        time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
-        walk_speed_collection[0] = poi.walk_speed*3.6
-        max_walking_time_collection[0] = poi.max_walking_time/60
-        catchment_area_collection[0] = poi.catchment_area
-        for start_station in poi.get_possible_start_stations():
+        date_collection[0] = analysis_parameters.day.isoformat()
+        time_start_collection[0] = analysis_parameters.time_start.isoformat(timespec='minutes')
+        time_end_collection[0] = analysis_parameters.time_end.isoformat(timespec='minutes')
+        walk_speed_collection[0] = analysis_parameters.walk_speed*3.6
+        max_walking_time_collection[0] = analysis_parameters.max_walking_time/60
+        catchment_area_collection[0] = analysis_parameters.catchment_area
+        for start_station in analysis_parameters.get_possible_start_stations():
             data = start_station + ", "
             start_station_data = start_station_data + data
         possible_start_stations_collection[0] = start_station_data
-        quality_category_collection[0] = poi.get_letter_of_quality_category()
+        quality_category_collection[0] = analysis_parameters.get_letter_of_quality_category()
 
 
 
@@ -488,12 +488,12 @@ class PublicTransitAnalysis:
             max_distance_station_to_stop_collection.append(station.max_distance_station_to_stop)
 
 
-            date_collection.append(poi.day.isoformat())
-            time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
-            time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
-            walk_speed_collection.append(poi.walk_speed*3.6)
-            max_walking_time_collection.append(poi.max_walking_time/60)
-            catchment_area_collection.append(poi.catchment_area)
+            date_collection.append(analysis_parameters.day.isoformat())
+            time_start_collection.append(analysis_parameters.time_start.isoformat(timespec='minutes'))
+            time_end_collection.append(analysis_parameters.time_end.isoformat(timespec='minutes'))
+            walk_speed_collection.append(analysis_parameters.walk_speed*3.6)
+            max_walking_time_collection.append(analysis_parameters.max_walking_time/60)
+            catchment_area_collection.append(analysis_parameters.catchment_area)
             quality_category_collection.append(None)
 
 
@@ -524,13 +524,13 @@ class PublicTransitAnalysis:
         )
         return df
 
-    def create_dataframe_for_stop_objects(self, stop_collection, poi:Request):
+    def create_dataframe_for_stop_objects(self, stop_collection, analysis_parameters:ReferencePoint):
         name_collection = ["Point of Interest"]
         gtfs_id_collection = [None]
         vehicle_mode_collection = [None]
         related_routes_collection = [None]
 
-        # attributes for the poi object
+        # attributes for the analysis_parameters object
         date_collection = [None]
         time_start_collection = [None]
         time_end_collection = [None]
@@ -542,17 +542,17 @@ class PublicTransitAnalysis:
 
 
         start_station_data = ""
-        date_collection[0] = poi.day.isoformat()
-        time_start_collection[0] = poi.time_start.isoformat(timespec='minutes')
-        time_end_collection[0] = poi.time_end.isoformat(timespec='minutes')
-        walk_speed_collection[0] = poi.walk_speed * 3.6
-        max_walking_time_collection[0] = poi.max_walking_time / 60
-        catchment_area_collection[0] = poi.catchment_area
-        for start_station in poi.get_possible_start_stations():
+        date_collection[0] = analysis_parameters.day.isoformat()
+        time_start_collection[0] = analysis_parameters.time_start.isoformat(timespec='minutes')
+        time_end_collection[0] = analysis_parameters.time_end.isoformat(timespec='minutes')
+        walk_speed_collection[0] = analysis_parameters.walk_speed * 3.6
+        max_walking_time_collection[0] = analysis_parameters.max_walking_time / 60
+        catchment_area_collection[0] = analysis_parameters.catchment_area
+        for start_station in analysis_parameters.get_possible_start_stations():
             data = start_station + ", "
             start_station_data = start_station_data + data
         possible_start_stations_collection[0] = start_station_data
-        quality_category_collection[0] = poi.get_letter_of_quality_category()
+        quality_category_collection[0] = analysis_parameters.get_letter_of_quality_category()
 
         for stop in stop_collection:
             departure_data = ""
@@ -567,12 +567,12 @@ class PublicTransitAnalysis:
                 departure_data = departure_data + data
             related_routes_collection.append(departure_data)
 
-            date_collection.append(poi.day.isoformat())
-            time_start_collection.append(poi.time_start.isoformat(timespec='minutes'))
-            time_end_collection.append(poi.time_end.isoformat(timespec='minutes'))
-            walk_speed_collection.append(poi.walk_speed*3.6)
-            max_walking_time_collection.append(poi.max_walking_time/60)
-            catchment_area_collection.append(poi.catchment_area)
+            date_collection.append(analysis_parameters.day.isoformat())
+            time_start_collection.append(analysis_parameters.time_start.isoformat(timespec='minutes'))
+            time_end_collection.append(analysis_parameters.time_end.isoformat(timespec='minutes'))
+            walk_speed_collection.append(analysis_parameters.walk_speed*3.6)
+            max_walking_time_collection.append(analysis_parameters.max_walking_time/60)
+            catchment_area_collection.append(analysis_parameters.catchment_area)
             quality_category_collection.append(None)
 
         df = pd.DataFrame(
@@ -592,7 +592,7 @@ class PublicTransitAnalysis:
         return df
 
 
-    def create_stop_and_route_objects(self, queried_stops, poi):
+    def create_stop_and_route_objects(self, queried_stops, analysis_parameters):
         stop_objects = []
         all_routes = []
         for stop in queried_stops:
@@ -619,7 +619,7 @@ class PublicTransitAnalysis:
                 for route in route_objects:
                     if route.gtfs_id == route_gtfsId:
                         route.add_departure_time(departure_time)
-                        route.frequency = route.calculate_frequency(poi)
+                        route.frequency = route.calculate_frequency(analysis_parameters)
                         all_routes.append(route)
             new_stop = Stop(stop["name"], stop["gtfsId"], stop["lat"], stop["lon"], stop["vehicleMode"], route_objects)
             stop_objects.append(new_stop)
@@ -641,90 +641,91 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
         return station_collection
 
-    def create_itineraries_from_start_to_each_station(self, station_collection, poi: Request, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
+    def create_itineraries_from_start_to_each_station(self, station_collection, analysis_parameters: ReferencePoint, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
         #possible_start_coordinates = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
-            station.query_and_create_transit_itineraries(poi, "start")
-            station.filter_itineraries_with_permissible_catchment_area("start", poi.catchment_area)
+            station.query_and_create_transit_itineraries(analysis_parameters, "start")
+            station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
             for itinerary in station.itineraries_with_permissible_catchment_area:
-                poi.add_possible_start_station(itinerary.start_station)
+                analysis_parameters.add_possible_start_station(itinerary.start_station)
                 itinerary.frequency = itinerary.calculate_frequency_iterate_directly_through_routes(route_collection)
             station.filter_shortest_itinerary()
-        poi.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
+        analysis_parameters.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         for station in station_collection:
-            station.calculate_travel_time_ratio(poi, "start")
+            station.calculate_travel_time_ratio(analysis_parameters, "start")
 
-    def export_stops_as_geopackage(self, stop_collection, poi:Request):
+    def export_stops_as_geopackage(self, stop_collection, analysis_parameters:ReferencePoint):
         lat_collection = []
         lon_collection = []
-        if poi is not None:
-            print("poi an export_stations_as_geopackage übergeben")
-            lat_collection.append(poi.lat)
-            lon_collection.append(poi.lon)
+        if analysis_parameters is not None:
+            print("analysis_parameters an export_stations_as_geopackage übergeben")
+            lat_collection.append(analysis_parameters.lat)
+            lon_collection.append(analysis_parameters.lon)
         else:
             lat_collection.append(None)
             lon_collection.append(None)
         for stop in stop_collection:
             lat_collection.append(stop.lat)
             lon_collection.append(stop.lon)
-        station_attributes = self.create_dataframe_for_stop_objects(stop_collection, poi=poi)
+        station_attributes = self.create_dataframe_for_stop_objects(stop_collection, analysis_parameters=analysis_parameters)
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(lon_collection, lat_collection), crs="EPSG:4326")
-        gdf.to_file(poi.filepath, driver='GPKG', layer=poi.layer_name)
-        layer = QgsVectorLayer(poi.filepath, poi.layer_name, "ogr")  # TODO funktioniert das so?
+        gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
+        layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")  # TODO funktioniert das so?
         QgsProject.instance().addMapLayer(layer)
-    def export_stations_as_geopackage(self, station_collection, poi:Request):
+    def export_stations_as_geopackage(self, station_collection, analysis_parameters:ReferencePoint):
         mean_lat_collection = []
         mean_lon_collection = []
-        if poi is not None:
-            print("poi an export_stations_as_geopackage übergeben")
-            mean_lat_collection.append(poi.lat)
-            mean_lon_collection.append(poi.lon)
+        if analysis_parameters is not None:
+            print("analysis_parameters an export_stations_as_geopackage übergeben")
+            mean_lat_collection.append(analysis_parameters.lat)
+            mean_lon_collection.append(analysis_parameters.lon)
         else:
             mean_lat_collection.append(None)
             mean_lon_collection.append(None)
         for station in station_collection:
             mean_lat_collection.append(station.mean_lat)
             mean_lon_collection.append(station.mean_lon)
-        station_attributes = self.create_dataframe_with_station_attributes(station_collection, poi=poi)
+        station_attributes = self.create_dataframe_with_station_attributes(station_collection, analysis_parameters=analysis_parameters)
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(mean_lon_collection, mean_lat_collection), crs="EPSG:4326")
-        gdf.to_file(poi.filepath, driver='GPKG', layer=poi.layer_name)
-        layer = QgsVectorLayer(poi.filepath, poi.layer_name, "ogr") #TODO funktioniert das so?
+        gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
+        layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr") #TODO funktioniert das so?
         QgsProject.instance().addMapLayer(layer)
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
         #runtime: about 2s
         start_time = datetime.now()
-        poi = self.create_request_object()
-        all_stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, poi)
-        self.export_stops_as_geopackage(all_stops, poi=poi)
+        analysis_parameters = self.create_request_object()
+        all_stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
+        all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, analysis_parameters)
+        self.export_stops_as_geopackage(all_stops, analysis_parameters=analysis_parameters)
         end_time = datetime.now()
         print('Duration: {}'.format(end_time - start_time))
 
     def stations_from_otp_to_gpkg(self):
         #runtime: about 2s
         start_time = datetime.now()
-        poi = self.create_request_object()
-        stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, poi)
+        analysis_parameters = self.create_request_object()
+        stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
+        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
         all_stations = self.create_stations(all_stops)
-        self.export_stations_as_geopackage(all_stations, poi=poi)
+        self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
         end_time = datetime.now()
         print('Duration: {}'.format(end_time - start_time))
 
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
+        #runtime: about 18min
         start_time = datetime.now()
-        poi = self.create_request_object()
-        stops_as_dict = self.query_all_stops_incl_departure_times(poi=poi)
-        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, poi)
+        analysis_parameters = self.create_request_object()
+        stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
+        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
         all_stations = self.create_stations(all_stops)
 
         if start_or_end_station == "start":
-            self.create_itineraries_from_start_to_each_station(all_stations, poi, all_routes)
-            self.export_stations_as_geopackage(all_stations, poi=poi)
+            self.create_itineraries_from_start_to_each_station(all_stations, analysis_parameters, all_routes)
+            self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
 
         elif start_or_end_station == "end":
             #end = {"lat": lat, "lon":  lon}

@@ -1,11 +1,7 @@
 
 #how to work with datetimepackage: https://docs.python.org/3/library/datetime.html#
 from datetime import time, date, datetime
-class Request:
-    # TODO possible alternative to 'poi' as standard name for this object could be location.
-    #  probably poi will be used for possible target places, other than the stations, so it would be nice to have no redundancy
-    #   also change the name of the texfields of the coordinates in the gui. Change from start_end to location
-    #   'configuration' could be a nice alternative for the classname 'request'
+class ReferencePoint:
 
     #TODO how to end the code, if except in try except
     def __init__(self, lat, lon, day, time_start, time_end, walk_speed, max_walking_time, layer_name, filepath):
