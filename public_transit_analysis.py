@@ -37,7 +37,7 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsPalLayerSettings, QgsTextFo
 from qgis.core import QgsStyle, QgsColorRamp, QgsColorRampShader #for a color ramp
 from qgis.core import QgsLayerTreeLayer, QgsLayerTreeGroup #to load all layers, also those in groups
 from qgis.core import QgsWkbTypes, QgsFillSymbol, QgsSimpleLineSymbolLayer # to set the polygon line to zero
-from qgis.core import edit # to change attribute from None to -1
+from qgis.core import QgsSymbolLevelItem # to set the symbol levels in isochrone layers
 from datetime import time, date, datetime # Don't delete! I use this for objects form request
 
 # personal imports
@@ -301,7 +301,7 @@ class PublicTransitAnalysis:
                 return False
             # Exception
         except requests.exceptions.RequestException as e:
-            self.iface.messageBar().pushMessage("Grizzly server is not running or runs on an different port")
+            self.iface.messageBar().pushMessage("Grizzly server/ OpenTripPlanner is not running or runs on an different port")
             return False
 
     def get_request_url(self): #TODO add this to the right functions which need the url
@@ -475,14 +475,14 @@ class PublicTransitAnalysis:
             else:
                 itinerary_frequency_collection.append(-1)
             for itinerary in station.selected_itineraries:
-                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, walk_distance: {itinerary.walk_distance}, walk_time: {itinerary.walk_time/60}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
+                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, frequency: {itinerary.frequency}, walk_distance: {round(itinerary.walk_distance,1)}, walk_time: {round((itinerary.walk_time/60),1)}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
                 selected_itineraries_data = selected_itineraries_data + data
                 start_station = itinerary.start_station + ", "
                 start_station_data = start_station_data + start_station
             selected_itineraries_collection.append(selected_itineraries_data)
             possible_start_stations_collection.append(start_station_data)
             for itinerary in station.itineraries_with_permissible_catchment_area:
-                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, walk_distance: {itinerary.walk_distance}, walk_time: {itinerary.walk_time/60}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
+                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, frequency: {itinerary.frequency}, walk_distance: {round(itinerary.walk_distance,1)}, walk_time: {round((itinerary.walk_time/60),1)}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
                 possible_itineraries_data = possible_itineraries_data + data
             possible_itineraries_collection.append(possible_itineraries_data)
             max_distance_station_to_stop_collection.append(station.max_distance_station_to_stop)
@@ -504,7 +504,7 @@ class PublicTransitAnalysis:
                 "travel_time_ratio": travel_time_ratio_collection,
                 "number_of_transfers": average_number_of_transfers_collection,
                 "itinerary_frequency_[min]": itinerary_frequency_collection,
-                "average_trip_time_[min]": average_trip_time_collection,
+                "trip_time_[min]": average_trip_time_collection,
                 "car_driving_time_[min]": car_driving_time_collection,
                 "walk_distance_[m]": average_walk_distance_of_trip_collection,
                 "walk_time_[m]": average_walk_time_collection,
@@ -635,6 +635,7 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
             else:
                 station = Station(current_stop_name, related_stops.copy())
+                station.calculate_max_distance_station_to_stop()
                 station_collection.append(station)
                 current_stop_name = element.name
                 related_stops.clear()
@@ -696,42 +697,52 @@ class PublicTransitAnalysis:
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
         #runtime: about 2s
-        start_time = datetime.now()
-        analysis_parameters = self.create_request_object()
-        all_stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
-        all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, analysis_parameters)
-        self.export_stops_as_geopackage(all_stops, analysis_parameters=analysis_parameters)
-        end_time = datetime.now()
-        print('Duration: {}'.format(end_time - start_time))
+        if self.check_grizzly_server_is_running():
+            start_time = datetime.now()
+            analysis_parameters = self.create_request_object()
+            all_stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
+            all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, analysis_parameters)
+            self.export_stops_as_geopackage(all_stops, analysis_parameters=analysis_parameters)
+            end_time = datetime.now()
+            print('Duration: {}'.format(end_time - start_time))
+        else:
+            return
 
     def stations_from_otp_to_gpkg(self):
         #runtime: about 2s
-        start_time = datetime.now()
-        analysis_parameters = self.create_request_object()
-        stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
-        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
-        all_stations = self.create_stations(all_stops)
-        self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
-        end_time = datetime.now()
-        print('Duration: {}'.format(end_time - start_time))
+        #runtime incl calculate_max_distance_station_to_stop for each station: 11s
+        if self.check_grizzly_server_is_running():
+            start_time = datetime.now()
+            analysis_parameters = self.create_request_object()
+            stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
+            all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
+            all_stations = self.create_stations(all_stops)
+            self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
+            end_time = datetime.now()
+            print('Duration: {}'.format(end_time - start_time))
+        else:
+            return
 
     def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
         #runtime: about 18min
         start_time = datetime.now()
-        analysis_parameters = self.create_request_object()
-        stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
-        all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
-        all_stations = self.create_stations(all_stops)
+        if self.check_grizzly_server_is_running():
+            analysis_parameters = self.create_request_object()
+            stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
+            all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
+            all_stations = self.create_stations(all_stops)
 
-        if start_or_end_station == "start":
-            self.create_itineraries_from_start_to_each_station(all_stations, analysis_parameters, all_routes)
-            self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
+            if start_or_end_station == "start":
+                self.create_itineraries_from_start_to_each_station(all_stations, analysis_parameters, all_routes)
+                self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
 
-        elif start_or_end_station == "end":
-            #end = {"lat": lat, "lon":  lon}
-            self.not_implemented_yet()
-        end_time = datetime.now()
-        print('Duration: {}'.format(end_time - start_time))
+            elif start_or_end_station == "end":
+                #end = {"lat": lat, "lon":  lon}
+                self.not_implemented_yet()
+            end_time = datetime.now()
+            print('Duration: {}'.format(end_time - start_time))
+        else:
+            return
 
     def select_output_file(self, current_line_edit): #
         filename, _filter = QFileDialog.getSaveFileName(
@@ -786,8 +797,7 @@ class PublicTransitAnalysis:
         #     self.travel_time_ratio_symbology(layer)
         #self.develop_labeling()
 
-    def symbology_for_particular_points(self, layer):
-        range_list = []
+    def symbology_for_particular_points(self, layer, range_list:list, target_field):
         # not reachable stations
         label = "Station not reachable"
         lower_limit = -1
@@ -809,7 +819,20 @@ class PublicTransitAnalysis:
         pink = "#fe019a"
         symbol.setColor(QtGui.QColor(pink))
         range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-        range_list.append(range)
+        range_list.insert(0,range)
+
+        range_list.reverse()
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.renderer().setUsingSymbolLevels(True)
+        # renderer.setSymbolLevels(True)
+
+        layer.triggerRepaint()
 
 
         # #set label for quality category
@@ -821,10 +844,11 @@ class PublicTransitAnalysis:
         # label.placement = QgsPalLayerSettings.AroundPoint
         # label.setDataDefinedProperty(QgsPalLayerSettings.Size, True, True,"8")
         # label.writeToLayer(layer)
-        return range_list
+
+        #return range_list
 
     def symbology_travel_time(self, layer):
-        target_field = "average_trip_time_[min]"
+        target_field = "trip_time_[min]"
         interval_size = 5
         data_collection = []
         features = layer.getFeatures()
@@ -854,17 +878,7 @@ class PublicTransitAnalysis:
             lower_limit += interval_size
             upper_limit += interval_size
 
-        range_of_particular_points = self.symbology_for_particular_points(layer)
-        range_list.extend(range_of_particular_points)
-
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.triggerRepaint()
-
+        self.symbology_for_particular_points(layer, range_list, target_field)
     def symbology_travel_time_ratio(self, layer):
         target_field = "travel_time_ratio"
 
@@ -886,19 +900,11 @@ class PublicTransitAnalysis:
             upper_limit = limits[index+1]
             symbol = self.set_symbol_point_or_polygon(layer)
             symbol.setColor(QtGui.QColor(color))
-            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(range)
+            element = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(element)
 
-        range_of_particular_points = self.symbology_for_particular_points(layer)
-        range_list.extend(range_of_particular_points)
+        self.symbology_for_particular_points(layer, range_list, target_field)
 
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.triggerRepaint()
 
     def symbology_frequency(self, layer):
         target_field = "itinerary_frequency_[min]"
@@ -919,16 +925,8 @@ class PublicTransitAnalysis:
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-        range_of_particular_points = self.symbology_for_particular_points(layer)
-        range_list.extend(range_of_particular_points)
+        self.symbology_for_particular_points(layer, range_list, target_field)
 
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.triggerRepaint()
 
     def symbology_walk_time(self, layer):
         target_field = "walk_time_[m]"
@@ -953,16 +951,8 @@ class PublicTransitAnalysis:
             range_list.append(range)
             lower_limit += interval_size
             upper_limit += interval_size
-        range_of_particular_points = self.symbology_for_particular_points(layer)
-        range_list.extend(range_of_particular_points)
+        self.symbology_for_particular_points(layer, range_list, target_field)
 
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.triggerRepaint()
 
     def symbology_walk_distance(self, layer):
         target_field = "walk_distance_[m]"
@@ -982,16 +972,7 @@ class PublicTransitAnalysis:
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-        range_of_particular_points = self.symbology_for_particular_points(layer)
-        range_list.extend(range_of_particular_points)
-
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.triggerRepaint()
+        self.symbology_for_particular_points(layer, range_list, target_field)
 
 
     def symbology_transfer(self, layer):
@@ -999,28 +980,20 @@ class PublicTransitAnalysis:
         range_list = []
         colour_gradient = self.get_colors("Oranges", 4)
         colour_gradient.reverse()
-        limits = [0.0, 0.0, 1.0, 2.0, 100.0]
+        limits = [0.0, 1.0, 2.0, 3.0, 100.0]
         for index, color in enumerate(colour_gradient):
             if index == 3:
                 label = "≥3"
             else:
                 label = f"{index} transfers"
-            lower_limit = limits[index] #exclusive
-            upper_limit = limits[index + 1] #inclusive
+            lower_limit = limits[index] #inclusive
+            upper_limit = limits[index + 1] #exclusive
             symbol = self.set_symbol_point_or_polygon(layer)
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-        range_of_particular_points = self.symbology_for_particular_points(layer)
-        range_list.extend(range_of_particular_points)
+        self.symbology_for_particular_points(layer, range_list, target_field)
 
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.triggerRepaint()
 
     """
     ChatGPT Code:
