@@ -47,7 +47,7 @@ class Station:
         position = {"lat": self.mean_lat, "lon": self.mean_lon}
         return position
 
-    def query_and_create_transit_itineraries(self, analysis_parameters: ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+    def query_and_create_transit_itineraries(self, analysis_parameters: ReferencePoint, start_or_end_station, route_collection,url ="http://localhost:8080/otp/gtfs/v1"): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         day = f"\"{analysis_parameters.day.isoformat()}\""
         departure = f"\"{analysis_parameters.time_start.isoformat(timespec='minutes')}\""
 
@@ -243,7 +243,6 @@ class Station:
             self.average_walk_time_of_trip = self.selected_itineraries[0].walk_time
             self.itinerary_frequency = self.selected_itineraries[0].frequency
 
-
     def calculate_travel_time_ratio(self, analysis_parameters:ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         self.query_and_set_car_driving_time(analysis_parameters, start_or_end_station, url=url)
         if self.average_trip_time is not None and self.car_driving_time is not None:
@@ -264,7 +263,6 @@ class Station:
         end_coordinate = (end["lat"], start["lon"])
         return geopy.distance.geodesic(start_coordiante, end_coordinate).m
 
-    #TODO this function is not used right now, but it is a nice functionality or rather a nice onformation. Implement this later for each station
     def calculate_max_distance_station_to_stop(self):
         max_distance = 0.0
         for stop in self.related_stops:

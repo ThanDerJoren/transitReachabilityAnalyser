@@ -563,7 +563,7 @@ class PublicTransitAnalysis:
                 departure_times = []
                 for departure in route.get_departure_times():
                     departure_times.append(departure.isoformat(timespec='minutes'))
-                data = f"{route.short_name}: {departure_times} \n"
+                data = f"{route.short_name}: averageFrequency: {route.frequency}, departures: {departure_times} \n"
                 departure_data = departure_data + data
             related_routes_collection.append(departure_data)
 
@@ -643,18 +643,21 @@ class PublicTransitAnalysis:
         return station_collection
 
     def create_itineraries_from_start_to_each_station(self, station_collection, analysis_parameters: ReferencePoint, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
-        #possible_start_coordinates = []
+        all_itineraries = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
-            station.query_and_create_transit_itineraries(analysis_parameters, "start")
+            station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection)
             station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
+            all_itineraries.extend(station.queried_itineraries) #TODO is this pass by value? thats importand!!
             for itinerary in station.itineraries_with_permissible_catchment_area:
                 analysis_parameters.add_possible_start_station(itinerary.start_station)
-                itinerary.frequency = itinerary.calculate_frequency_iterate_directly_through_routes(route_collection)
+                itinerary.frequency = itinerary.calculate_frequency(route_collection)
             station.filter_shortest_itinerary()
         analysis_parameters.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         for station in station_collection:
             station.calculate_travel_time_ratio(analysis_parameters, "start")
+
+
 
     def export_stops_as_geopackage(self, stop_collection, analysis_parameters:ReferencePoint):
         lat_collection = []

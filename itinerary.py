@@ -16,7 +16,7 @@ class Itinerary:
         self.legs = legs
         #print(startStation, endStation, duration, routeNumbers)
 
-    def calculate_frequency_iterate_directly_through_routes(self, route_collection):
+    def calculate_frequency(self, route_collection):
         # duration: 18min
         all_frequencies = []
         for trip in self.legs:
