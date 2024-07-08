@@ -1,6 +1,6 @@
 class Itinerary:
 
-    def __init__(self, startTime, startStation, endStation, duration, numberOfTransfers, walkDistance, walkTime,distanceToStartStation, distanceFromEndStation, modes, routeNumbers, legs):
+    def __init__(self, startTime, startStation, endStation, duration, numberOfTransfers, walkDistance, walkTime,distanceToStartStation, distanceFromEndStation, modes, routeNumbers, legs, frequency):
         self.start_time = startTime
         self.start_station = startStation
         self.end_station = endStation
@@ -12,7 +12,7 @@ class Itinerary:
         self.distance_from_end_station = distanceFromEndStation
         self.modes = modes.copy()
         self.route_numbers = routeNumbers.copy()
-        self.frequency = None
+        self.frequency = frequency
         self.legs = legs
         #print(startStation, endStation, duration, routeNumbers)
 

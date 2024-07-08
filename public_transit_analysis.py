@@ -651,7 +651,7 @@ class PublicTransitAnalysis:
             all_itineraries.extend(station.queried_itineraries) #TODO is this pass by value? thats importand!!
             for itinerary in station.itineraries_with_permissible_catchment_area:
                 analysis_parameters.add_possible_start_station(itinerary.start_station)
-                itinerary.frequency = itinerary.calculate_frequency(route_collection)
+                #itinerary.frequency = itinerary.calculate_frequency(route_collection) #TODO if the method with nextLegs doesn't work enable again
             station.filter_shortest_itinerary()
         analysis_parameters.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         for station in station_collection:

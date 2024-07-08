@@ -79,6 +79,8 @@ class Station:
                         numberOfTransfers,
                         walkDistance,
                         legs{{
+                            startTime
+                            nextLegs(numberOfLegs:1){{startTime}}
                             mode
                             distance                            
                             from{{ 
@@ -110,6 +112,7 @@ class Station:
             distance_to_start_station: float
             distance_from_end_station: float
             first_transit_mode = True
+            all_frequencies = []
             for item in element["legs"]:
                 legs.append(item)
                 modes.append(item["mode"])
@@ -122,6 +125,21 @@ class Station:
                     route_numbers.append(item["route"]["shortName"])
                 else:
                     route_numbers.append(item["mode"])
+
+                if item["nextLegs"] is not None:
+                    leg_departure = datetime.fromtimestamp(item["startTime"]/1000.0)  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
+                    next_departure = datetime.fromtimestamp(item["nextLegs"][0]["startTime"]/1000.0)
+                    print(f"leg_departure: {leg_departure}")
+                    print(f"next_departure: {next_departure}")
+                    frequency = next_departure - leg_departure #This calculation doesn't find frequency changes
+                    print(f"frequency: {frequency}")
+                    all_frequencies.append(frequency.total_seconds()/60)
+                else:
+                    all_frequencies.append(0.5)  # you can start to walk every half minute
+            worst_frequency = all_frequencies[0]
+            for frequency in all_frequencies:
+                if worst_frequency < frequency:  # frequency: every...minute
+                    worst_frequency = frequency
             if element["legs"][0]["mode"] == "WALK":
                 distance_to_start_station = element["legs"][0]["distance"]
             else:
@@ -142,7 +160,8 @@ class Station:
                 distance_from_end_station,
                 modes,
                 route_numbers,
-                legs.copy()
+                legs.copy(),
+                worst_frequency
             )
             self.queried_itineraries.append(itinerary)
 
@@ -273,3 +292,4 @@ class Station:
             if distance > max_distance:
                 max_distance = distance
         self.max_distance_station_to_stop = max_distance
+
