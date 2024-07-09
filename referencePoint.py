@@ -16,7 +16,7 @@ class ReferencePoint:
         self.walk_speed = walk_speed
         self.max_walking_time = max_walking_time
         self.catchment_area = self.calculate_distance(self.walk_speed, self.max_walking_time)
-        self.__possible_start_stations = []
+        self.__first_possible_stops = []
         self.quality_category = 500
         self.search_window = self.calculate_search_window()
 
@@ -160,16 +160,16 @@ class ReferencePoint:
 
 
 
-    def get_possible_start_stations(self):
-        return self.__possible_start_stations
+    def get_first_possible_stops(self):
+        return self.__first_possible_stops
 
-    def add_possible_start_station(self, start_station:str):
-        if self.__possible_start_stations.count(start_station) == 0:
-            self.__possible_start_stations.append(start_station)
+    def add_first_possible_stop(self, start_station:str):
+        if self.__first_possible_stops.count(start_station) == 0:
+            self.__first_possible_stops.append(start_station)
 
-    def remove_empty_entries_in_possible_start_station(self):
-        while "" in self.__possible_start_stations:
-            self.__possible_start_stations.remove("")  # because of the declaration of stat_station, there can be empty strings in possible_start_station
+    def remove_empty_entries_in_first_possible_stops(self):
+        while "" in self.__first_possible_stops:
+            self.__first_possible_stops.remove("")  # because of the declaration of stat_station, there can be empty strings in possible_start_station
 
     def get_letter_of_quality_category(self):
         """

@@ -405,13 +405,13 @@ class PublicTransitAnalysis:
 
         # The first row of the data frame will be the point to which/ from which every itinerary goes
         name_collection = ["Point of Interest"]
-        average_trip_time_collection = [-2]
+        trip_time_collection = [-2]
         car_driving_time_collection = [None]
         travel_time_ratio_collection = [-2]
 
-        average_number_of_transfers_collection = [-2]
-        average_walk_distance_of_trip_collection = [-2]
-        average_walk_time_collection = [-2]
+        number_of_transfers_collection = [-2]
+        meters_to_first_stop_collection = [-2]
+        walktime_to_first_stop_collection = [-2]
         itinerary_frequency_collection = [-2]
         selected_itineraries_collection = [None]
         possible_itineraries_collection = [None]
@@ -424,65 +424,64 @@ class PublicTransitAnalysis:
         walk_speed_collection = [None]
         max_walking_time_collection = [None]
         catchment_area_collection = [None]
-        possible_start_stations_collection = [None]
+        first_possible_stops_collection = [None]
         quality_category_collection = [None]
 
 
 
-        start_station_data = ""
+        first_stop_data = ""
         date_collection[0] = analysis_parameters.day.isoformat()
         time_start_collection[0] = analysis_parameters.time_start.isoformat(timespec='minutes')
         time_end_collection[0] = analysis_parameters.time_end.isoformat(timespec='minutes')
         walk_speed_collection[0] = analysis_parameters.walk_speed*3.6
         max_walking_time_collection[0] = analysis_parameters.max_walking_time/60
         catchment_area_collection[0] = analysis_parameters.catchment_area
-        for start_station in analysis_parameters.get_possible_start_stations():
-            data = start_station + ", "
-            start_station_data = start_station_data + data
-        possible_start_stations_collection[0] = start_station_data
+        for start_stop in analysis_parameters.get_first_possible_stops():
+            data = start_stop + ", "
+            first_stop_data = first_stop_data + data
+        first_possible_stops_collection[0] = first_stop_data
         quality_category_collection[0] = analysis_parameters.get_letter_of_quality_category()
 
 
 
         for station in station_collection:
             selected_itineraries_data = ""
-            start_station_data = ""
+            first_stop_data = ""
             possible_itineraries_data = ""
             name_collection.append(station.name)
-            if station.average_trip_time is not None:
-                average_trip_time_collection.append(station.average_trip_time)
+            if station.trip_time is not None:
+                trip_time_collection.append(station.trip_time)
             else:
-                average_trip_time_collection.append(-1)
+                trip_time_collection.append(-1)
             car_driving_time_collection.append(station.car_driving_time)
             if station.travel_time_ratio is not None:
                 travel_time_ratio_collection.append(station.travel_time_ratio)
             else:
                 travel_time_ratio_collection.append(-1)
-            if station.average_number_of_transfers is not None:
-                average_number_of_transfers_collection.append(station.average_number_of_transfers)
+            if station.number_of_transfers is not None:
+                number_of_transfers_collection.append(station.number_of_transfers)
             else:
-                average_number_of_transfers_collection.append(-1)
+                number_of_transfers_collection.append(-1)
             if station.meters_to_first_stop is not None:
-                average_walk_distance_of_trip_collection.append(station.meters_to_first_stop)
+                meters_to_first_stop_collection.append(station.meters_to_first_stop)
+                walktime = (station.meters_to_first_stop/analysis_parameters.walk_speed) / 60 #seconds in minutes
+                walktime_to_first_stop_collection.append(walktime)
             else:
-                average_walk_distance_of_trip_collection.append(-1)
-            if station.walktime_to_first_stop is not None:
-                average_walk_time_collection.append(station.walktime_to_first_stop / 60) #seconds in minutes
-            else:
-                average_walk_time_collection.append(-1)
+                meters_to_first_stop_collection.append(-1)
+                walktime_to_first_stop_collection.append(-1)
             if station.itinerary_frequency is not None:
                 itinerary_frequency_collection.append(station.itinerary_frequency)
             else:
                 itinerary_frequency_collection.append(-1)
             for itinerary in station.selected_itineraries:
-                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, frequency: {itinerary.frequency}, walk_distance: {round(itinerary.walk_distance,1)}, walk_time: {round((itinerary.walk_time/60),1)}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
+                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, frequency: {itinerary.frequency}, meters_to_first_stop: {round(itinerary.meters_first_stop, 1)}, walktime_to_first_stop: {round(((itinerary.meters_first_stop/analysis_parameters.walk_speed) / 60), 1)}, firstStop: {itinerary.first_stop}, lastStop:{itinerary.last_stop};\n"
                 selected_itineraries_data = selected_itineraries_data + data
-                start_station = itinerary.start_station + ", "
-                start_station_data = start_station_data + start_station
+                start_stop = itinerary.first_stop + ", "
+                first_stop_data = first_stop_data + start_stop
             selected_itineraries_collection.append(selected_itineraries_data)
-            possible_start_stations_collection.append(start_station_data)
+            first_possible_stops_collection.append(first_stop_data)
             for itinerary in station.itineraries_with_permissible_catchment_area:
-                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, frequency: {itinerary.frequency}, walk_distance: {round(itinerary.walk_distance,1)}, walk_time: {round((itinerary.walk_time/60),1)}, startStation: {itinerary.start_station}, endStation:{itinerary.end_station};\n"
+                data = f"{itinerary.route_numbers}, duration: {itinerary.duration}, frequency: {itinerary.frequency}, meters_to_first_stop: {round(itinerary.meters_first_stop, 1)}, walktime_to_first_stop: {round(((itinerary.meters_first_stop/analysis_parameters.walk_speed) / 60), 1)}, firstStop: {itinerary.first_stop}, lastStop:{itinerary.last_stop};\n"
                 possible_itineraries_data = possible_itineraries_data + data
             possible_itineraries_collection.append(possible_itineraries_data)
             max_distance_station_to_stop_collection.append(station.max_distance_station_to_stop)
@@ -502,12 +501,12 @@ class PublicTransitAnalysis:
             {
                 "Name": name_collection,
                 "travel_time_ratio": travel_time_ratio_collection,
-                "number_of_transfers": average_number_of_transfers_collection,
+                "number_of_transfers": number_of_transfers_collection,
                 "itinerary_frequency_[min]": itinerary_frequency_collection,
-                "trip_time_[min]": average_trip_time_collection,
+                "trip_time_[min]": trip_time_collection,
                 "car_driving_time_[min]": car_driving_time_collection,
-                "walk_distance_[m]": average_walk_distance_of_trip_collection,
-                "walk_time_[m]": average_walk_time_collection,
+                "walk_distance_[m]": meters_to_first_stop_collection,
+                "walk_time_[min]": walktime_to_first_stop_collection,
                 "selected_itineraries": selected_itineraries_collection,
                 "possible_itineraries": possible_itineraries_collection,
                 "max_distance_station_to_stop": max_distance_station_to_stop_collection,
@@ -517,7 +516,7 @@ class PublicTransitAnalysis:
                 "walk_speed_in_km/h": walk_speed_collection,
                 "max_walking_time_in_min": max_walking_time_collection,
                 "catchment_area": catchment_area_collection,
-                "possible_start_stations": possible_start_stations_collection,
+                "first_possible_stops": first_possible_stops_collection,
                 "quality_category": quality_category_collection
 
             }
@@ -548,7 +547,7 @@ class PublicTransitAnalysis:
         walk_speed_collection[0] = analysis_parameters.walk_speed * 3.6
         max_walking_time_collection[0] = analysis_parameters.max_walking_time / 60
         catchment_area_collection[0] = analysis_parameters.catchment_area
-        for start_station in analysis_parameters.get_possible_start_stations():
+        for start_station in analysis_parameters.get_first_possible_stops():
             data = start_station + ", "
             start_station_data = start_station_data + data
         possible_start_stations_collection[0] = start_station_data
@@ -649,23 +648,15 @@ class PublicTransitAnalysis:
             time_itineraries_one_station = datetime.now()
             station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection)
             print('     query and create Itineraries for one station: {}'.format(datetime.now() - time_itineraries_one_station))
-            time_filter_catchment_area = datetime.now()
+            time_filter_itineraries = datetime.now()
             station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
-            print('     filter catchment area: {}'.format(datetime.now() - time_filter_catchment_area))
-            time_extend_itineraries = datetime.now()
             all_itineraries.extend(station.queried_itineraries) #TODO is this pass by value? thats importand!!
-            print('     extend itineraries: {}'.format(datetime.now() - time_extend_itineraries))
-            time_collect_start_stations = datetime.now()
             for itinerary in station.itineraries_with_permissible_catchment_area:
-                analysis_parameters.add_possible_start_station(itinerary.start_station)
+                analysis_parameters.add_first_possible_stop(itinerary.first_stop)
                 #itinerary.frequency = itinerary.calculate_frequency(route_collection) #TODO if the method with nextLegs doesn't work enable again
-            print('     collect start stations: {}'.format(datetime.now() - time_collect_start_stations))
-            time_shortest_itinerary = datetime.now()
             station.filter_shortest_itinerary()
-            print('     filter shortest itinerary: {}'.format(datetime.now() - time_shortest_itinerary))
-        time_remove_entries = datetime.now()
-        analysis_parameters.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
-        print('     remove empty entries: {}'.format(datetime.now() - time_remove_entries))
+            print('     filter catchment area: {}'.format(datetime.now() - time_filter_itineraries))
+        analysis_parameters.remove_empty_entries_in_first_possible_stops() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         time_traveltime_ratio = datetime.now()
         for station in station_collection:
             station.calculate_travel_time_ratio(analysis_parameters, "start")
@@ -955,7 +946,7 @@ class PublicTransitAnalysis:
 
 
     def symbology_walk_time(self, layer):
-        target_field = "walk_time_[m]"
+        target_field = "walk_time_[min]"
         range_list = []
         interval_size = 5
         data_collection = []

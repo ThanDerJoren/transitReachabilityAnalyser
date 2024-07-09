@@ -32,12 +32,11 @@ class Station:
         self.isochrone: Polygon
         self.max_distance_station_to_stop = None
 
-        self.average_trip_time: float = None
+        self.trip_time: float = None
         self.car_driving_time: float = None
         self.travel_time_ratio: float = None
-        self.average_number_of_transfers: float = None
+        self.number_of_transfers: float = None
         self.meters_to_first_stop: float = None
-        self.walktime_to_first_stop: float = None
         self.itinerary_frequency: float = None
         self.queried_itineraries = []
         self.itineraries_with_permissible_catchment_area = []
@@ -99,28 +98,31 @@ class Station:
                 }}
             }}
         """
+        time_query_itineraries = datetime.now()
         queriedPlan = requests.post(url, json={"query": plan})
         queriedPlan = json.loads(queriedPlan.content)
         itineraries = queriedPlan["data"]["plan"]["itineraries"]
+        print('         otp_query: {}'.format(datetime.now() - time_query_itineraries))
 
+        time_create_itineraries = datetime.now()
         for element in itineraries:
             modes = []
             route_numbers = []
             legs = []
-            start_station = "" #it needs to be an empty string. If the shortest route is walking, there will be no start station
-            end_station = ""
-            distance_to_start_station: float
-            distance_from_end_station: float
+            first_stop = "" #it needs to be an empty string. If the shortest route is walking, there will be no start station
+            last_stop = ""
+            distance_to_first_stop: float
+            distance_from_last_stop: float
             first_transit_mode = True
             all_frequencies = []
             for item in element["legs"]:
                 legs.append(item)
                 modes.append(item["mode"])
                 if first_transit_mode and item["mode"] != "WALK":
-                    start_station = item["from"]["name"]
+                    first_stop = item["from"]["name"]
                     first_transit_mode = False
                 if item["mode"] != "WALK":
-                    end_station = item["to"]["name"]
+                    last_stop = item["to"]["name"]
                 if item["route"] is not None:
                     route_numbers.append(item["route"]["shortName"])
                 else:
@@ -138,29 +140,29 @@ class Station:
                 if worst_frequency < frequency:  # frequency: every...minute
                     worst_frequency = frequency
             if element["legs"][0]["mode"] == "WALK":
-                distance_to_start_station = element["legs"][0]["distance"]
+                distance_to_first_stop = element["legs"][0]["distance"]
             else:
-                distance_to_start_station = 0
+                distance_to_first_stop = 0
             if element["legs"][-1]["mode"] == "WALK":
-                distance_from_end_station = element["legs"][-1]["distance"]
+                distance_from_last_stop = element["legs"][-1]["distance"]
             else:
-                distance_from_end_station = 0
+                distance_from_last_stop = 0
             itinerary = Itinerary(
                 datetime.fromtimestamp(element["startTime"]/1000.0),  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
-                start_station,
-                end_station,
+                first_stop,
+                last_stop,
                 round(element["duration"]/60), # seconds in minutes
                 element["numberOfTransfers"],
                 element["walkDistance"],
-                element["walkDistance"]/analysis_parameters.walk_speed,
-                distance_to_start_station,
-                distance_from_end_station,
+                distance_to_first_stop,
+                distance_from_last_stop,
                 modes,
                 route_numbers,
                 legs.copy(),
                 worst_frequency
             )
             self.queried_itineraries.append(itinerary)
+        print('         create itineraries: {}'.format(datetime.now() - time_create_itineraries))
 
     def query_walk_distance(self, start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         if start is None and end is not None:
@@ -231,17 +233,17 @@ class Station:
         # the allowed walk distance is ony used for the first walk distance
         if start_or_end_station == "start":
             for itinerary in self.queried_itineraries:
-                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_to_start_station <= catchment_area:
+                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_first_stop <= catchment_area:
                     #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
-                if itinerary.meters_to_start_station <= catchment_area and self.name == itinerary.end_station: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
+                if itinerary.meters_first_stop <= catchment_area and self.name == itinerary.last_stop: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
         elif start_or_end_station == "end":
             for itinerary in self.queried_itineraries:
-                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_to_start_station <= catchment_area:
+                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_first_stop <= catchment_area:
                     #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
-                if itinerary.distance_from_end_station <= catchment_area and self.name == itinerary.start_station:
+                if itinerary.meters_end_stop <= catchment_area and self.name == itinerary.first_stop:
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
         else:
             print("It has to be pass either 'start' or 'end'")
@@ -253,16 +255,15 @@ class Station:
                 if itinerary.duration < self.selected_itineraries[0].duration:
                     self.selected_itineraries[0] = itinerary
 
-            self.average_trip_time = self.selected_itineraries[0].duration
-            self.average_number_of_transfers = self.selected_itineraries[0].number_of_transfers
-            self.meters_to_first_stop = self.selected_itineraries[0].meters_to_start_station
-            self.walktime_to_first_stop = self.selected_itineraries[0].walk_time
+            self.trip_time = self.selected_itineraries[0].duration
+            self.number_of_transfers = self.selected_itineraries[0].number_of_transfers
+            self.meters_to_first_stop = self.selected_itineraries[0].meters_first_stop
             self.itinerary_frequency = self.selected_itineraries[0].frequency
 
     def calculate_travel_time_ratio(self, analysis_parameters:ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         self.query_and_set_car_driving_time(analysis_parameters, start_or_end_station, url=url)
-        if self.average_trip_time is not None and self.car_driving_time is not None:
-            self.travel_time_ratio = self.average_trip_time/self.car_driving_time
+        if self.trip_time is not None and self.car_driving_time is not None:
+            self.travel_time_ratio = self.trip_time / self.car_driving_time
         else:
             print("either the station is not reachable with public tranpsort or the travel_time_ratio is calculated before the PT Trip time")
     def calculate_linear_distance(self, start:dict = None, end: dict = None):
