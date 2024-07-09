@@ -36,8 +36,8 @@ class Station:
         self.car_driving_time: float = None
         self.travel_time_ratio: float = None
         self.average_number_of_transfers: float = None
-        self.average_walk_distance_of_trip: float = None
-        self.average_walk_time_of_trip: float = None
+        self.meters_to_first_stop: float = None
+        self.walktime_to_first_stop: float = None
         self.itinerary_frequency: float = None
         self.queried_itineraries = []
         self.itineraries_with_permissible_catchment_area = []
@@ -129,10 +129,7 @@ class Station:
                 if item["nextLegs"] is not None:
                     leg_departure = datetime.fromtimestamp(item["startTime"]/1000.0)  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
                     next_departure = datetime.fromtimestamp(item["nextLegs"][0]["startTime"]/1000.0)
-                    print(f"leg_departure: {leg_departure}")
-                    print(f"next_departure: {next_departure}")
                     frequency = next_departure - leg_departure #This calculation doesn't find frequency changes
-                    print(f"frequency: {frequency}")
                     all_frequencies.append(frequency.total_seconds()/60)
                 else:
                     all_frequencies.append(0.5)  # you can start to walk every half minute
@@ -226,22 +223,22 @@ class Station:
     def filter_itineraries_with_permissible_catchment_area(self, start_or_end_station, catchment_area):
         # TODO check if this new if-statement works
         # the allowed walk distance is used over the whole trip
-        if start_or_end_station =="start":
-            for itinerary in self.queried_itineraries:
-                if itinerary.walk_distance <= catchment_area:
-                    self.itineraries_with_permissible_catchment_area.append(itinerary)
+        # if start_or_end_station =="start":
+        #     for itinerary in self.queried_itineraries:
+        #         if itinerary.walk_distance <= catchment_area:
+        #             self.itineraries_with_permissible_catchment_area.append(itinerary)
 
         # the allowed walk distance is ony used for the first walk distance
-        # if start_or_end_station == "start":
-        #     for itinerary in self.queried_itineraries:
-        #         if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.distance_to_start_station <= catchment_area:
-        #             #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
-        #             self.itineraries_with_permissible_catchment_area.append(itinerary)
-        #         if itinerary.distance_to_start_station <= catchment_area and self.name == itinerary.end_station: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
-        #             self.itineraries_with_permissible_catchment_area.append(itinerary)
+        if start_or_end_station == "start":
+            for itinerary in self.queried_itineraries:
+                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_to_start_station <= catchment_area:
+                    #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
+                    self.itineraries_with_permissible_catchment_area.append(itinerary)
+                if itinerary.meters_to_start_station <= catchment_area and self.name == itinerary.end_station: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
+                    self.itineraries_with_permissible_catchment_area.append(itinerary)
         elif start_or_end_station == "end":
             for itinerary in self.queried_itineraries:
-                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.distance_to_start_station <= catchment_area:
+                if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_to_start_station <= catchment_area:
                     #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
                 if itinerary.distance_from_end_station <= catchment_area and self.name == itinerary.start_station:
@@ -258,8 +255,8 @@ class Station:
 
             self.average_trip_time = self.selected_itineraries[0].duration
             self.average_number_of_transfers = self.selected_itineraries[0].number_of_transfers
-            self.average_walk_distance_of_trip = self.selected_itineraries[0].walk_distance
-            self.average_walk_time_of_trip = self.selected_itineraries[0].walk_time
+            self.meters_to_first_stop = self.selected_itineraries[0].meters_to_start_station
+            self.walktime_to_first_stop = self.selected_itineraries[0].walk_time
             self.itinerary_frequency = self.selected_itineraries[0].frequency
 
     def calculate_travel_time_ratio(self, analysis_parameters:ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):

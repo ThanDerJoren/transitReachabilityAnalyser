@@ -462,12 +462,12 @@ class PublicTransitAnalysis:
                 average_number_of_transfers_collection.append(station.average_number_of_transfers)
             else:
                 average_number_of_transfers_collection.append(-1)
-            if station.average_walk_distance_of_trip is not None:
-                average_walk_distance_of_trip_collection.append(station.average_walk_distance_of_trip)
+            if station.meters_to_first_stop is not None:
+                average_walk_distance_of_trip_collection.append(station.meters_to_first_stop)
             else:
                 average_walk_distance_of_trip_collection.append(-1)
-            if station.average_walk_time_of_trip is not None:
-                average_walk_time_collection.append(station.average_walk_time_of_trip/60) #seconds in minutes
+            if station.walktime_to_first_stop is not None:
+                average_walk_time_collection.append(station.walktime_to_first_stop / 60) #seconds in minutes
             else:
                 average_walk_time_collection.append(-1)
             if station.itinerary_frequency is not None:
@@ -646,16 +646,30 @@ class PublicTransitAnalysis:
         all_itineraries = []
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
+            time_itineraries_one_station = datetime.now()
             station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection)
+            print('     query and create Itineraries for one station: {}'.format(datetime.now() - time_itineraries_one_station))
+            time_filter_catchment_area = datetime.now()
             station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
+            print('     filter catchment area: {}'.format(datetime.now() - time_filter_catchment_area))
+            time_extend_itineraries = datetime.now()
             all_itineraries.extend(station.queried_itineraries) #TODO is this pass by value? thats importand!!
+            print('     extend itineraries: {}'.format(datetime.now() - time_extend_itineraries))
+            time_collect_start_stations = datetime.now()
             for itinerary in station.itineraries_with_permissible_catchment_area:
                 analysis_parameters.add_possible_start_station(itinerary.start_station)
                 #itinerary.frequency = itinerary.calculate_frequency(route_collection) #TODO if the method with nextLegs doesn't work enable again
+            print('     collect start stations: {}'.format(datetime.now() - time_collect_start_stations))
+            time_shortest_itinerary = datetime.now()
             station.filter_shortest_itinerary()
+            print('     filter shortest itinerary: {}'.format(datetime.now() - time_shortest_itinerary))
+        time_remove_entries = datetime.now()
         analysis_parameters.remove_empty_entries_in_possible_start_station() # because of the declaration of stat_station, there can be empty strings in possible_start_station
+        print('     remove empty entries: {}'.format(datetime.now() - time_remove_entries))
+        time_traveltime_ratio = datetime.now()
         for station in station_collection:
             station.calculate_travel_time_ratio(analysis_parameters, "start")
+        print('     traveltime ratio: {}'.format(datetime.now() - time_traveltime_ratio))
 
 
 
@@ -706,8 +720,7 @@ class PublicTransitAnalysis:
             all_stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
             all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, analysis_parameters)
             self.export_stops_as_geopackage(all_stops, analysis_parameters=analysis_parameters)
-            end_time = datetime.now()
-            print('Duration: {}'.format(end_time - start_time))
+            print('Duration: {}'.format(datetime.now() - start_time))
         else:
             return
 
@@ -730,14 +743,24 @@ class PublicTransitAnalysis:
         #runtime: about 18min
         start_time = datetime.now()
         if self.check_grizzly_server_is_running():
+            time_reference_object = datetime.now()
             analysis_parameters = self.create_request_object()
+            print('create referenceObject: {}'.format(datetime.now() - time_reference_object))
+            time_create_stops = datetime.now()
             stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
             all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
+            print('create stops: {}'.format(datetime.now() - time_create_stops))
+            time_create_stations = datetime.now()
             all_stations = self.create_stations(all_stops)
+            print('create stations: {}'.format(datetime.now() - time_create_stations))
 
             if start_or_end_station == "start":
+                time_all_Itineraries = datetime.now()
                 self.create_itineraries_from_start_to_each_station(all_stations, analysis_parameters, all_routes)
+                print('create all Itineraries: {}'.format(datetime.now() - time_all_Itineraries))
+                time_export_layer = datetime.now()
                 self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
+                print('export to layer: {}'.format(datetime.now() - time_export_layer))
 
             elif start_or_end_station == "end":
                 #end = {"lat": lat, "lon":  lon}

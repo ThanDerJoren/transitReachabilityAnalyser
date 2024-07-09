@@ -177,7 +177,7 @@
          <item>
           <widget class="QLineEdit" name="le_lat_of_start_end">
            <property name="text">
-            <string>52.252805844727774</string>
+            <string>52.25275668185875</string>
            </property>
           </widget>
          </item>
@@ -191,7 +191,7 @@
          <item>
           <widget class="QLineEdit" name="le_lon_of_start_end">
            <property name="text">
-            <string>10.539315760379354</string>
+            <string>10.539292742327776</string>
            </property>
           </widget>
          </item>
@@ -332,7 +332,7 @@
        <item row="10" column="1">
         <widget class="QLineEdit" name="le_date">
          <property name="text">
-          <string>2024-04-18</string>
+          <string>2024-07-15</string>
          </property>
         </widget>
        </item>

@@ -8,7 +8,7 @@ class Itinerary:
         self.number_of_transfers = numberOfTransfers
         self.walk_distance = walkDistance
         self.walk_time = walkTime
-        self.distance_to_start_station = distanceToStartStation
+        self.meters_to_start_station = distanceToStartStation
         self.distance_from_end_station = distanceFromEndStation
         self.modes = modes.copy()
         self.route_numbers = routeNumbers.copy()
