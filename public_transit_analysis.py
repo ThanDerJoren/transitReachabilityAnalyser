@@ -868,53 +868,35 @@ class PublicTransitAnalysis:
 
     def symbology_travel_time(self, layer):
         target_field = "trip_time_[min]"
-        interval_size = 5
-        data_collection = []
-        features = layer.getFeatures()
-        for row in features:
-            if row[target_field] is None:
-                row[target_field] = -1 # in case there are None type objects
-            data_collection.append(row[target_field])
-        data_collection.sort(reverse=True)
-        interval_amount = math.ceil(data_collection[0] / interval_size)
-
-        colour_gradient = self.get_colors("Turbo", interval_amount)
+        limits = [0, 6, 11, 16, 21, 31, 41, 51, 61, 76, 91, 1000]
+        colour_gradient = self.get_colors("Turbo", 11)
 
         range_list = []
-        lower_limit = 0.0
-        upper_limit = interval_size
         for index, color in enumerate(colour_gradient):
-            print(f"lower_limit: {lower_limit}")
-            print(f"upper_limit: {upper_limit}\n")
-            label = f"{lower_limit}< to ≤{upper_limit} min."
+            if index == 10:
+                label = ">91 min"
+            else:
+                label = f"{limits[index]}≤ to <{limits[index+1]} min."
+            lower_limit = limits[index]
+            upper_limit = limits[index + 1]
             symbol = self.set_symbol_point_or_polygon(layer)#QgsSymbol.defaultSymbol(layer.geometryType())
             symbol.setColor(QtGui.QColor(color))
-            # symbol.setColor(QtGui.QColor(color.hex_l))
-            # current_opacity = (interval_size-index)/interval_size
-            # symbol.setOpacity(opacity/(index+1))
             sector = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(sector)
-            lower_limit += interval_size
-            upper_limit += interval_size
 
         self.symbology_for_particular_points(layer, range_list, target_field)
     def symbology_travel_time_ratio(self, layer):
         target_field = "travel_time_ratio"
-
-        darkgreen = "#00b050"
-        green = "#92d050"
-        orange = "#ffc000"
-        lightred = "#ff0000"
-        red = "#c00002"
-        darkred = "#5d0000"
-        colour_gradient = [darkgreen, green, orange, lightred, red, darkred]
-        range_list = []
         limits = [0.0, 1.0, 1.5, 2.1, 2.8, 3.8, 100.0]
+        colour_gradient = self.get_colors("RdYlGn", 6)
+        colour_gradient.reverse()
+
+        range_list = []
         for index, color in enumerate(colour_gradient):
             if index == 5:
                 label = "≥3.8"
             else:
-                label = f"{limits[index]}< to ≤{limits[index+1]}"
+                label = f"{limits[index]}≤ to <{limits[index+1]}"
             lower_limit = limits[index]
             upper_limit = limits[index+1]
             symbol = self.set_symbol_point_or_polygon(layer)
@@ -927,19 +909,19 @@ class PublicTransitAnalysis:
 
     def symbology_frequency(self, layer):
         target_field = "itinerary_frequency_[min]"
-        range_list = []
+        limits = [0, 6, 11, 21, 41, 61, 121, 1441]  # 1440min = 1trip per day
         colour_gradient = self.get_colors("PuRd", 7)
         colour_gradient.reverse()
         #limits = [0, 5, 8, 10, 15, 20, 30, 40, 60, 120, 1440]
-        limits = [0,5,10,20,40,60,120,1440] #1440min = 1trip per day
 
+        range_list = []
         for index, color in enumerate(colour_gradient):
             if index == 9:
                 label = ">120 min"
             else:
-                label = f"{limits[index]}< to ≤{limits[index+1]} min frequency" # f"{limits[index+1]} min frequency"
-            lower_limit = limits[index] #exclusive
-            upper_limit = limits[index + 1] #inclusive
+                label = f"{limits[index]}≤ to <{limits[index+1]} min frequency" # f"{limits[index+1]} min frequency"
+            lower_limit = limits[index]
+            upper_limit = limits[index + 1]
             symbol = self.set_symbol_point_or_polygon(layer)
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
@@ -949,44 +931,40 @@ class PublicTransitAnalysis:
 
     def symbology_walk_time(self, layer):
         target_field = "walk_time_[min]"
-        range_list = []
-        interval_size = 5
-        data_collection = []
-        features = layer.getFeatures()
-        for row in features:
-            data_collection.append(row[target_field])
-        data_collection.sort(reverse=True)
-        interval_amount = math.ceil(data_collection[0] / interval_size)
-        colour_gradient = self.get_colors("Purples", interval_amount)
+        limits = [0, 6, 11, 16, 21, 120]
+        colour_gradient = self.get_colors("Purples", 5)
         colour_gradient.reverse()
 
-        lower_limit = 0.0
-        upper_limit = interval_size
+        range_list = []
         for index, color in enumerate(colour_gradient):
-            label = f"{lower_limit}< to ≤{upper_limit} min walktime"
+            if index == 4:
+                label = ">21min walktime"
+            else:
+                label = f"{limits[index]}≤ to <{limits[index+1]} min walktime"
+            lower_limit = limits[index]
+            upper_limit = limits[index+1]
             symbol = self.set_symbol_point_or_polygon(layer)
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-            lower_limit += interval_size
-            upper_limit += interval_size
+
         self.symbology_for_particular_points(layer, range_list, target_field)
 
 
     def symbology_walk_distance(self, layer):
         target_field = "walk_distance_[m]"
-        range_list = []
+        limits = [0, 100, 200, 300, 500, 750, 1000, 5000]  # 1440min = 1trip per day
         colour_gradient = self.get_colors("Purples", 7)
         colour_gradient.reverse()
-        limits = [0,100, 200, 300, 500, 750, 1000, 5000]  # 1440min = 1trip per day
 
+        range_list = []
         for index, color in enumerate(colour_gradient):
             if index == 6:
                 label = ">1000m walkdistance"
             else:
-                label = f"{limits[index]}< to ≤{limits[index + 1]} m walkdistance"  # f"{limits[index+1]} min frequency"
-            lower_limit = limits[index]  # exclusive
-            upper_limit = limits[index + 1]  # inclusive
+                label = f"{limits[index]}≤ to <{limits[index + 1]} m walkdistance"  # f"{limits[index+1]} min frequency"
+            lower_limit = limits[index]  # inclusive
+            upper_limit = limits[index + 1]  # exclusive
             symbol = self.set_symbol_point_or_polygon(layer)
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
@@ -996,10 +974,11 @@ class PublicTransitAnalysis:
 
     def symbology_transfer(self, layer):
         target_field = "number_of_transfers"
-        range_list = []
+        limits = [0.0, 1.0, 2.0, 3.0, 100.0]
         colour_gradient = self.get_colors("Oranges", 4)
         colour_gradient.reverse()
-        limits = [0.0, 1.0, 2.0, 3.0, 100.0]
+
+        range_list = []
         for index, color in enumerate(colour_gradient):
             if index == 3:
                 label = "≥3"
