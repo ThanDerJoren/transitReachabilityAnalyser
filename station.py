@@ -1,5 +1,5 @@
 import json
-import datetime
+#import datetime
 import requests
 
 #from pyrosm import OSM
@@ -8,7 +8,7 @@ import requests
 #import networkx as nx
 from shapely.geometry import Point
 from shapely.geometry import Polygon
-from datetime import time, date, datetime
+from datetime import timedelta, datetime
 
 from .stop import Stop # used in relatedStops
 from .itinerary import Itinerary
@@ -79,7 +79,7 @@ class Station:
                         walkDistance,
                         legs{{
                             startTime
-                            nextLegs(numberOfLegs:1){{startTime}}
+                            nextLegs(numberOfLegs:3){{startTime}}
                             mode
                             distance                            
                             from{{ 
@@ -103,7 +103,7 @@ class Station:
         queriedPlan = json.loads(queriedPlan.content)
         itineraries = queriedPlan["data"]["plan"]["itineraries"]
         print('         otp_query: {}'.format(datetime.now() - time_query_itineraries))
-
+        num_itineraries = len(itineraries)
         time_create_itineraries = datetime.now()
         for element in itineraries:
             modes = []
@@ -129,10 +129,10 @@ class Station:
                     route_numbers.append(item["mode"])
 
                 if item["nextLegs"] is not None:
-                    leg_departure = datetime.fromtimestamp(item["startTime"]/1000.0)  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
-                    next_departure = datetime.fromtimestamp(item["nextLegs"][0]["startTime"]/1000.0)
-                    frequency = next_departure - leg_departure #This calculation doesn't find frequency changes
-                    all_frequencies.append(frequency.total_seconds()/60)
+                    first_departure = datetime.fromtimestamp(item["startTime"]/1000.0)  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
+                    next_legs = item["nextLegs"]
+                    average_frequency = self.calculate_average_frequency(first_departure,next_legs)
+                    all_frequencies.append(average_frequency)
                 else:
                     all_frequencies.append(0.5)  # you can start to walk every half minute
             worst_frequency = all_frequencies[0]
@@ -162,7 +162,10 @@ class Station:
                 worst_frequency
             )
             self.queried_itineraries.append(itinerary)
-        print('         create itineraries: {}'.format(datetime.now() - time_create_itineraries))
+        runtime_loop = datetime.now() - time_create_itineraries
+        print('         create itineraries: {}'.format(runtime_loop))
+        print(f'        num Itineraries: {num_itineraries}')
+        print(f'        average time per itinerary: {runtime_loop}')
 
     def query_walk_distance(self, start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         if start is None and end is not None:
@@ -290,4 +293,60 @@ class Station:
             if distance > max_distance:
                 max_distance = distance
         self.max_distance_station_to_stop = max_distance
+
+    def calculate_average_frequency(self, first_departure, next_legs:list):
+        #TODO comment
+        leg_departure_a = datetime.fromtimestamp(next_legs[1]["startTime"]/1000.0)
+        leg_departure_b = datetime.fromtimestamp(next_legs[2]["startTime"]/1000.0)
+
+        diff_departure_a = leg_departure_a - first_departure
+        diff_departure_b = leg_departure_b - first_departure
+
+        average_frequency_a = diff_departure_a/2
+        average_frequency_b = diff_departure_b/3
+
+        if average_frequency_a > average_frequency_b:
+            average_frequency = average_frequency_a
+        else:
+            average_frequency = average_frequency_b
+        average_frequency = round(average_frequency.total_seconds() / 60, 1)
+        return average_frequency
+
+
+
+
+        # runtime: 45min because of for loop
+        # one_hour = timedelta(minutes=60)
+        # search_window = first_departure + one_hour
+        # last_departure = 0
+        # num_legs = 0
+        # departure_range = 0
+        # if datetime.fromtimestamp(next_legs[0]["startTime"]/1000.0)< search_window:
+        #     num_legs +=1
+        #     #frequency is shorter than 60 min
+        #     for leg in next_legs:
+        #         leg_departure = datetime.fromtimestamp(leg["startTime"]/1000.0)
+        #         print(f"leg_departure: {leg_departure}, {type(leg_departure)}")
+        #         if leg_departure < search_window:
+        #             num_legs +=1
+        #             last_departure = leg_departure #next_legs has to be ordered
+        #             departure_range = timedelta(minutes=60)
+        #         else:
+        #             break
+        # elif datetime.fromtimestamp(next_legs[-1]["startTime"]/1000.0) < search_window:
+        #     # thats why it has to be 12 nextLegs. 5min frequency -> the 12th departure == first departure +1h
+        #     # if the frequency is shorter than 5 min, the 12th departure is < first departure +1h
+        #     last_departure = datetime.fromtimestamp(next_legs[-1]["startTime"]/1000.0)
+        #     num_legs = 12
+        #     departure_range = last_departure - first_departure
+        # else:
+        #     last_departure = datetime.fromtimestamp(next_legs[0]["startTime"]/1000.0)
+        #     num_legs = 1
+        #     departure_range = last_departure - first_departure
+        # average_frequency = departure_range/(num_legs)
+        # average_frequency = round(average_frequency.total_seconds() / 60, 1)
+        # return average_frequency
+
+
+
 
