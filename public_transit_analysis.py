@@ -704,6 +704,8 @@ class PublicTransitAnalysis:
         QgsProject.instance().addMapLayer(layer)
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
+        print("master Branch")
+
         #runtime: about 2s
         if self.check_grizzly_server_is_running():
             start_time = datetime.now()
