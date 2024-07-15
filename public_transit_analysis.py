@@ -404,7 +404,7 @@ class PublicTransitAnalysis:
         """
 
         # The first row of the data frame will be the point to which/ from which every itinerary goes
-        name_collection = ["Point of Interest"]
+        name_collection = ["Reference Point"]
         trip_time_collection = [-2]
         car_driving_time_collection = [None]
         travel_time_ratio_collection = [-2]
@@ -450,27 +450,27 @@ class PublicTransitAnalysis:
             possible_itineraries_data = ""
             name_collection.append(station.name)
             if station.trip_time is not None:
-                trip_time_collection.append(station.trip_time)
+                trip_time_collection.append(round(station.trip_time,1))
             else:
                 trip_time_collection.append(-1)
-            car_driving_time_collection.append(station.car_driving_time)
+            car_driving_time_collection.append(round(station.car_driving_time,1))
             if station.travel_time_ratio is not None:
-                travel_time_ratio_collection.append(station.travel_time_ratio)
+                travel_time_ratio_collection.append(round(station.travel_time_ratio,1))
             else:
                 travel_time_ratio_collection.append(-1)
             if station.number_of_transfers is not None:
-                number_of_transfers_collection.append(station.number_of_transfers)
+                number_of_transfers_collection.append(round(station.number_of_transfers,1))
             else:
                 number_of_transfers_collection.append(-1)
             if station.meters_to_first_stop is not None:
-                meters_to_first_stop_collection.append(station.meters_to_first_stop)
+                meters_to_first_stop_collection.append(round(station.meters_to_first_stop,1))
                 walktime = (station.meters_to_first_stop/analysis_parameters.walk_speed) / 60 #seconds in minutes
-                walktime_to_first_stop_collection.append(walktime)
+                walktime_to_first_stop_collection.append(round(walktime,1))
             else:
                 meters_to_first_stop_collection.append(-1)
                 walktime_to_first_stop_collection.append(-1)
             if station.itinerary_frequency is not None:
-                itinerary_frequency_collection.append(station.itinerary_frequency)
+                itinerary_frequency_collection.append(round(station.itinerary_frequency,1))
             else:
                 itinerary_frequency_collection.append(-1)
             for itinerary in station.selected_itineraries:
@@ -490,9 +490,9 @@ class PublicTransitAnalysis:
             date_collection.append(analysis_parameters.day.isoformat())
             time_start_collection.append(analysis_parameters.time_start.isoformat(timespec='minutes'))
             time_end_collection.append(analysis_parameters.time_end.isoformat(timespec='minutes'))
-            walk_speed_collection.append(analysis_parameters.walk_speed*3.6)
-            max_walking_time_collection.append(analysis_parameters.max_walking_time/60)
-            catchment_area_collection.append(analysis_parameters.catchment_area)
+            walk_speed_collection.append(round(analysis_parameters.walk_speed*3.6, 1))
+            max_walking_time_collection.append(round(analysis_parameters.max_walking_time/60, 1))
+            catchment_area_collection.append(round(analysis_parameters.catchment_area, 1))
             quality_category_collection.append(None)
 
 
@@ -524,7 +524,7 @@ class PublicTransitAnalysis:
         return df
 
     def create_dataframe_for_stop_objects(self, stop_collection, analysis_parameters:ReferencePoint):
-        name_collection = ["Point of Interest"]
+        name_collection = ["Reference Point"]
         gtfs_id_collection = [None]
         vehicle_mode_collection = [None]
         related_routes_collection = [None]
@@ -710,8 +710,12 @@ class PublicTransitAnalysis:
         if self.check_grizzly_server_is_running():
             start_time = datetime.now()
             analysis_parameters = self.create_request_object()
+            time_stop_query = datetime.now()
             all_stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
+            print('stop query: {}'.format(datetime.now() - time_stop_query))
+            time_stop_creation = datetime.now()
             all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, analysis_parameters)
+            print('stop creation: {}'.format(datetime.now() - time_stop_creation))
             self.export_stops_as_geopackage(all_stops, analysis_parameters=analysis_parameters)
             print('Duration: {}'.format(datetime.now() - start_time))
         else:
@@ -828,7 +832,7 @@ class PublicTransitAnalysis:
         range_list.append(range)
 
         # start/end point
-        label = "Point of interest"
+        label = "Start"
         lower_limit = -2
         upper_limit = -2
         if QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
@@ -868,15 +872,16 @@ class PublicTransitAnalysis:
 
     def symbology_travel_time(self, layer):
         target_field = "trip_time_[min]"
-        limits = [0, 6, 11, 16, 21, 31, 41, 51, 61, 76, 91, 1000]
+        limits = [0, 5.001, 10.001, 15.001, 20.001, 30.001, 40.001, 50.001, 60.001, 75.001, 90.001, 1000]
+        label_limits = [0, 5, 10, 15, 20, 30, 40, 50, 60, 75, 90, 1000]
         colour_gradient = self.get_colors("Turbo", 11)
 
         range_list = []
         for index, color in enumerate(colour_gradient):
             if index == 10:
-                label = ">91 min"
+                label = ">90 min"
             else:
-                label = f"{limits[index]}≤ to <{limits[index+1]} min."
+                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min"
             lower_limit = limits[index]
             upper_limit = limits[index + 1]
             symbol = self.set_symbol_point_or_polygon(layer)#QgsSymbol.defaultSymbol(layer.geometryType())
@@ -888,7 +893,7 @@ class PublicTransitAnalysis:
     def symbology_travel_time_ratio(self, layer):
         target_field = "travel_time_ratio"
         limits = [0.0, 1.0, 1.5, 2.1, 2.8, 3.8, 100.0]
-        colour_gradient = self.get_colors("RdYlGn", 6)
+        colour_gradient = self.get_colors("Spectral", 6) #RdYlGn
         colour_gradient.reverse()
 
         range_list = []
@@ -909,17 +914,18 @@ class PublicTransitAnalysis:
 
     def symbology_frequency(self, layer):
         target_field = "itinerary_frequency_[min]"
-        limits = [0, 6, 11, 21, 41, 61, 121, 1441]  # 1440min = 1trip per day
-        colour_gradient = self.get_colors("PuRd", 7)
+        limits = [0, 5.001, 10.001, 20.001, 40.001, 60.001, 120.001, 1441]  # 1440min = 1trip per day
+        label_limits = [0,5,10,20,40,60,120,1441]
+        colour_gradient = self.get_colors("Viridis", 7)#PuRd
         colour_gradient.reverse()
         #limits = [0, 5, 8, 10, 15, 20, 30, 40, 60, 120, 1440]
 
         range_list = []
         for index, color in enumerate(colour_gradient):
-            if index == 9:
+            if index == 6:
                 label = ">120 min"
             else:
-                label = f"{limits[index]}≤ to <{limits[index+1]} min frequency" # f"{limits[index+1]} min frequency"
+                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min frequency" # f"{limits[index+1]} min frequency"
             lower_limit = limits[index]
             upper_limit = limits[index + 1]
             symbol = self.set_symbol_point_or_polygon(layer)
@@ -931,16 +937,17 @@ class PublicTransitAnalysis:
 
     def symbology_walk_time(self, layer):
         target_field = "walk_time_[min]"
-        limits = [0, 6, 11, 16, 21, 120]
+        limits = [0, 5.001, 10.001, 15.001, 20.001, 120]
+        label_limits = [0,5,10,15,20,120]
         colour_gradient = self.get_colors("Purples", 5)
         colour_gradient.reverse()
 
         range_list = []
         for index, color in enumerate(colour_gradient):
             if index == 4:
-                label = ">21min walktime"
+                label = ">21 min walktime"
             else:
-                label = f"{limits[index]}≤ to <{limits[index+1]} min walktime"
+                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min walktime"
             lower_limit = limits[index]
             upper_limit = limits[index+1]
             symbol = self.set_symbol_point_or_polygon(layer)
@@ -953,16 +960,17 @@ class PublicTransitAnalysis:
 
     def symbology_walk_distance(self, layer):
         target_field = "walk_distance_[m]"
-        limits = [0, 100, 200, 300, 500, 750, 1000, 5000]  # 1440min = 1trip per day
+        limits = [0, 100.001, 200.001, 300.001, 500.001, 750.001, 1000.001, 5000.001]  # 1440min = 1trip per day
+        label_limits = [0, 100, 200, 300, 500, 750, 1000, 5000]
         colour_gradient = self.get_colors("Purples", 7)
         colour_gradient.reverse()
 
         range_list = []
         for index, color in enumerate(colour_gradient):
             if index == 6:
-                label = ">1000m walkdistance"
+                label = ">1000 m walkdistance"
             else:
-                label = f"{limits[index]}≤ to <{limits[index + 1]} m walkdistance"  # f"{limits[index+1]} min frequency"
+                label = f"{label_limits[index]}< to ≤{label_limits[index + 1]} m walkdistance"  # f"{limits[index+1]} min frequency"
             lower_limit = limits[index]  # inclusive
             upper_limit = limits[index + 1]  # exclusive
             symbol = self.set_symbol_point_or_polygon(layer)

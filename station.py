@@ -284,6 +284,7 @@ class Station:
         return geopy.distance.geodesic(start_coordiante, end_coordinate).m
 
     def calculate_max_distance_station_to_stop(self):
+        time_walk_distance_station_stop = datetime.now()
         max_distance = 0.0
         for stop in self.related_stops:
             end = {"lat": stop.lat, "lon": stop.lon}
@@ -293,6 +294,7 @@ class Station:
             if distance > max_distance:
                 max_distance = distance
         self.max_distance_station_to_stop = max_distance
+        print('time_walk_distance_station_stop: {}'.format(datetime.now() - time_walk_distance_station_stop))
 
     def calculate_average_frequency(self, first_departure, next_legs:list):
         #TODO comment
