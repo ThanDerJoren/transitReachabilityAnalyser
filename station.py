@@ -239,6 +239,8 @@ class Station:
                 if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_first_stop <= catchment_area:
                     #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
+                #TODO this behavior has to be changed if the end point aren't Stations anymore
+                #   then it doesn't make sense anymore to check if the enpoint has the same name as the last stop
                 if itinerary.meters_first_stop <= catchment_area and self.name == itinerary.last_stop: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
         elif start_or_end_station == "end":

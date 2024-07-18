@@ -406,7 +406,7 @@ class PublicTransitAnalysis:
         # The first row of the data frame will be the point to which/ from which every itinerary goes
         name_collection = ["Reference Point"]
         trip_time_collection = [-2]
-        car_driving_time_collection = [None]
+        car_driving_time_collection = [-2]
         travel_time_ratio_collection = [-2]
 
         number_of_transfers_collection = [-2]
@@ -415,7 +415,7 @@ class PublicTransitAnalysis:
         itinerary_frequency_collection = [-2]
         selected_itineraries_collection = [None]
         possible_itineraries_collection = [None]
-        max_distance_station_to_stop_collection = [None]
+        max_distance_station_to_stop_collection = [-2]
 
         #attributes for the analysis_parameters object
         date_collection = [None]
@@ -453,7 +453,10 @@ class PublicTransitAnalysis:
                 trip_time_collection.append(round(station.trip_time,1))
             else:
                 trip_time_collection.append(-1)
-            car_driving_time_collection.append(round(station.car_driving_time,1))
+            if station.car_driving_time is not None:
+                car_driving_time_collection.append(round(station.car_driving_time,1))
+            else:
+                car_driving_time_collection.append(-1)
             if station.travel_time_ratio is not None:
                 travel_time_ratio_collection.append(round(station.travel_time_ratio,1))
             else:
@@ -496,7 +499,9 @@ class PublicTransitAnalysis:
             quality_category_collection.append(None)
 
 
-
+        #TODO change order: first columns in ordner of symbology feature
+        # change 'trip time' to 'travel time'
+        # change 'car driving time' to 'travel time car', because it includes 5 min to provide car
         df = pd.DataFrame(
             {
                 "Name": name_collection,
@@ -517,7 +522,7 @@ class PublicTransitAnalysis:
                 "max_walking_time_in_min": max_walking_time_collection,
                 "catchment_area": catchment_area_collection,
                 "first_possible_stops": first_possible_stops_collection,
-                "quality_category": quality_category_collection
+                "quality_category": quality_category_collection #TODO delete
 
             }
         )
