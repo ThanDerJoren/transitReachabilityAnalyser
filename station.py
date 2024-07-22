@@ -46,7 +46,7 @@ class Station:
         position = {"lat": self.mean_lat, "lon": self.mean_lon}
         return position
 
-    def query_and_create_transit_itineraries(self, analysis_parameters: ReferencePoint, start_or_end_station, route_collection,url ="http://localhost:8080/otp/gtfs/v1"): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+    def query_and_create_transit_itineraries(self, analysis_parameters: ReferencePoint, start_or_end_station, route_collection,url): #date: str, time: str, search_window: int, start: dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         day = f"\"{analysis_parameters.day.isoformat()}\""
         departure = f"\"{analysis_parameters.time_start.isoformat(timespec='minutes')}\""
 
@@ -167,7 +167,7 @@ class Station:
         print(f'        num Itineraries: {num_itineraries}')
         print(f'        average time per itinerary: {runtime_loop}')
 
-    def query_walk_distance(self, start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+    def query_walk_distance(self, url, start:dict = None, end: dict = None):
         if start is None and end is not None:
             start = self.get_position()
         elif start is not None and end is None:
@@ -196,7 +196,7 @@ class Station:
             return itinerary["walkDistance"]
         #return queriedPlan["data"]["plan"]["itineraries"][0]["walkDistance"]
 
-    def query_and_set_car_driving_time(self, analysis_parameters:ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"):#start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+    def query_and_set_car_driving_time(self, analysis_parameters:ReferencePoint, start_or_end_station, url):#start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         if start_or_end_station == "start":
             start = {"lat": analysis_parameters.lat, "lon": analysis_parameters.lon}
             end = self.get_position()
@@ -265,7 +265,7 @@ class Station:
             self.meters_to_first_stop = self.selected_itineraries[0].meters_first_stop
             self.itinerary_frequency = self.selected_itineraries[0].frequency
 
-    def calculate_travel_time_ratio(self, analysis_parameters:ReferencePoint, start_or_end_station, url ="http://localhost:8080/otp/gtfs/v1"): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
+    def calculate_travel_time_ratio(self, analysis_parameters:ReferencePoint, start_or_end_station, url): #start:dict = None, end: dict = None, url ="http://localhost:8080/otp/gtfs/v1"):
         self.query_and_set_car_driving_time(analysis_parameters, start_or_end_station, url=url)
         if self.trip_time is not None and self.car_driving_time is not None:
             self.travel_time_ratio = self.trip_time / self.car_driving_time
@@ -285,12 +285,12 @@ class Station:
         end_coordinate = (end["lat"], start["lon"])
         return geopy.distance.geodesic(start_coordiante, end_coordinate).m
 
-    def calculate_max_distance_station_to_stop(self):
+    def calculate_max_distance_station_to_stop(self, url):
         time_walk_distance_station_stop = datetime.now()
         max_distance = 0.0
         for stop in self.related_stops:
             end = {"lat": stop.lat, "lon": stop.lon}
-            distance = self.query_walk_distance(end = end)
+            distance = self.query_walk_distance(url, end = end)
             if distance is None: #backup, if OTP dosen't calculate a walk distane
                 distance = self.calculate_linear_distance(end = end)
             if distance > max_distance:

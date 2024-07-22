@@ -639,7 +639,7 @@ class PublicTransitAnalysis:
                 related_stops.append(element)
             else:
                 station = Station(current_stop_name, related_stops.copy())
-                station.calculate_max_distance_station_to_stop()
+                station.calculate_max_distance_station_to_stop(self.get_request_url())
                 station_collection.append(station)
                 current_stop_name = element.name
                 related_stops.clear()
@@ -651,7 +651,7 @@ class PublicTransitAnalysis:
         # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
             time_itineraries_one_station = datetime.now()
-            station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection)
+            station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection, url=self.get_request_url())
             print('     query and create Itineraries for one station: {}'.format(datetime.now() - time_itineraries_one_station))
             time_filter_itineraries = datetime.now()
             station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
@@ -664,7 +664,7 @@ class PublicTransitAnalysis:
         analysis_parameters.remove_empty_entries_in_first_possible_stops() # because of the declaration of stat_station, there can be empty strings in possible_start_station
         time_traveltime_ratio = datetime.now()
         for station in station_collection:
-            station.calculate_travel_time_ratio(analysis_parameters, "start")
+            station.calculate_travel_time_ratio(analysis_parameters, "start", url=self.get_request_url())
         print('     traveltime ratio: {}'.format(datetime.now() - time_traveltime_ratio))
 
 
