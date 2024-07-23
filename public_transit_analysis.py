@@ -778,9 +778,36 @@ class PublicTransitAnalysis:
         station_attributes = self.create_dataframe_with_station_attributes(station_collection, analysis_parameters=analysis_parameters)
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(mean_lon_collection, mean_lat_collection), crs="EPSG:4326")
-        gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
-        layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr") #TODO funktioniert das so?
+        # permanent layer
+        # gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
+        # layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")
+
+        """Chat GPT code"""
+        # Create a temporary memory layer: "Point?crs=EPSG:4326"
+        layer = QgsVectorLayer(f"Point?crs=EPSG:4326", analysis_parameters.layer_name, "memory")
+
+        # Add the necessary fields to the layer with automatically determined types
+        pr = layer.dataProvider()
+
+        for field in gdf.columns:
+            if field != 'geometry':
+                dtype = gdf[field].dtype
+                qvariant_type = self.determine_qvariant_type(dtype)
+                pr.addAttributes([QgsField(field, qvariant_type)])
+
+        layer.updateFields()
+
+        # Add features to the layer
+        for idx, row in gdf.iterrows():
+            feature = QgsFeature()
+            feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(row.geometry.x, row.geometry.y)))
+            feature.setAttributes([row[field] for field in gdf.columns if field != 'geometry'])
+            pr.addFeature(feature)
+
+
         QgsProject.instance().addMapLayer(layer)
+
+
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
         print("master Branch")
@@ -1145,6 +1172,24 @@ class PublicTransitAnalysis:
         # Populate the comboBox with names of the specified type of layers
         self.dlg.cb_layer_symbology.addItems([layer.name() for layer in all_layers])
 
+    """
+    Request: temporary layer"""
+
+    def determine_qvariant_type(self, dtype):
+        if pd.api.types.is_integer_dtype(dtype):
+            return QVariant.Int
+        elif pd.api.types.is_float_dtype(dtype):
+            return QVariant.Double
+        elif pd.api.types.is_object_dtype(dtype):
+            return QVariant.String
+        elif pd.api.types.is_bool_dtype(dtype):
+            return QVariant.Bool
+        elif pd.api.types.is_datetime64_any_dtype(dtype):
+            return QVariant.DateTime
+        elif pd.api.types.is_timedelta64_dtype(dtype):
+            return QVariant.Time
+        else:
+            return QVariant.String
 
 
     """   
