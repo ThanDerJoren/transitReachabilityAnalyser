@@ -24,6 +24,7 @@
 import math
 
 import sys
+import os
 sys.path.append('C:\\OSGeo4W64\\apps\\qgis\\python')
 sys.path.append('C:\\OSGeo4W64\\apps\\qgis\\python\\plugins')
 
@@ -408,7 +409,7 @@ class PublicTransitAnalysis:
 
     def create_request_object(self):
         layer_name = self.dlg.le_layer_name.text()  # TODO co ntrole, that the name is usable as filename
-        if self.dlg.le_filepath_itineraries.text() is not None:
+        if self.dlg.le_filepath_itineraries.text() != "":
             filepath = self.dlg.le_filepath_itineraries.text()
         else:
             self.iface.messageBar().pushMessage("The filepath has to be selected first")
@@ -426,32 +427,6 @@ class PublicTransitAnalysis:
 
 
 
-
-        # walkspeed_index = self.dlg.cb_walking_speed.currentIndex()
-        # if walkspeed_index == 0:
-        #     walk_speed = 2 / 3.6
-        # elif walkspeed_index == 1:
-        #     walk_speed = 4 / 3.6
-        # elif walkspeed_index == 2:
-        #     walk_speed = 6 / 3.6
-        # elif walkspeed_index == 3:
-        #     input = self.dlg.le_personalized_tempo.text()
-        #     try:
-        #         walk_speed = float(input) / 3.6
-        #     except ValueError:
-        #         error_message = "The walk_speed has to be a float with '.' as seperator" + "\n"
-        #         self.iface.messageBar().pushMessage(error_message)
-        #         return
-        # walkingtime_index = self.dlg.cb_max_walking_time.currentIndex()
-        # if walkingtime_index == 0:
-        #     max_walking_time = 17 * 60  # minutes in seconds
-        # elif walkingtime_index == 1:
-        #     input = self.dlg.le_max_walking_time.text()
-        #     try:
-        #         max_walking_time = int(input) * 60  # minutes in seconds
-        #     except ValueError:
-        #         error_message = "The max_walking_time has to be an integer" + "\n"
-        #         self.iface.messageBar().pushMessage(error_message)
         analysis_parameters = ReferencePoint(
             #TODO make the try except statements not in the setter, but in this method
             lat=self.dlg.le_lat_of_start_end.text(),
@@ -779,35 +754,10 @@ class PublicTransitAnalysis:
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(mean_lon_collection, mean_lat_collection), crs="EPSG:4326")
         # permanent layer
-        # gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
-        # layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")
-
-        """Chat GPT code"""
-        # Create a temporary memory layer: "Point?crs=EPSG:4326"
-        layer = QgsVectorLayer(f"Point?crs=EPSG:4326", analysis_parameters.layer_name, "memory")
-
-        # Add the necessary fields to the layer with automatically determined types
-        pr = layer.dataProvider()
-
-        for field in gdf.columns:
-            if field != 'geometry':
-                dtype = gdf[field].dtype
-                qvariant_type = self.determine_qvariant_type(dtype)
-                pr.addAttributes([QgsField(field, qvariant_type)])
-
-        layer.updateFields()
-
-        # Add features to the layer
-        for idx, row in gdf.iterrows():
-            feature = QgsFeature()
-            feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(row.geometry.x, row.geometry.y)))
-            feature.setAttributes([row[field] for field in gdf.columns if field != 'geometry'])
-            pr.addFeature(feature)
-
+        gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
+        layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")
 
         QgsProject.instance().addMapLayer(layer)
-
-
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
         print("master Branch")
@@ -858,11 +808,16 @@ class PublicTransitAnalysis:
             print('create stations: {}'.format(datetime.now() - time_create_stations))
 
             if start_or_end_station == "start":
+                # you run the programm with one specific endpoint.
+                selected_stations = all_stations[488] #TODO delete number to calculate all stations
+                if not isinstance(selected_stations, list):
+                    selected_stations = [selected_stations]
+
                 time_all_Itineraries = datetime.now()
-                self.create_itineraries_from_start_to_each_station(all_stations, analysis_parameters, all_routes)
+                self.create_itineraries_from_start_to_each_station(selected_stations, analysis_parameters, all_routes)
                 print('create all Itineraries: {}'.format(datetime.now() - time_all_Itineraries))
                 time_export_layer = datetime.now()
-                self.export_stations_as_geopackage(all_stations, analysis_parameters=analysis_parameters)
+                self.export_stations_as_geopackage(selected_stations, analysis_parameters=analysis_parameters)
                 print('export to layer: {}'.format(datetime.now() - time_export_layer))
 
             elif start_or_end_station == "end":
@@ -874,17 +829,19 @@ class PublicTransitAnalysis:
             return
 
     def select_output_file(self, current_line_edit): #
+        # Get the directory of the currently opened QGIS project
+        project_path = QgsProject.instance().fileName()
+        if project_path:
+            default_dir = os.path.dirname(project_path)
+        else:
+            default_dir = os.path.expanduser("~")  # Fallback to home directory if no project is open
+
         filename, _filter = QFileDialog.getSaveFileName(
             self.dlg, "Filepath ", "", '*.gpkg')
         if current_line_edit == "itineraries":
-                self.dlg.le_filepath_itineraries.setText(filename)
-                index = -6
-                layer_name = ""
-                while not(filename[index] == "/" or filename[index] == "\\"):
-                    layer_name += filename[index]
-                    index -= 1
-                layer_name = layer_name[::-1] #reverse the string
-                self.dlg.le_layer_name.setText(layer_name)
+            self.dlg.le_filepath_itineraries.setText(filename)
+            layer_name = os.path.splitext(os.path.basename(filename))[0]
+            self.dlg.le_layer_name.setText(layer_name)
 
     def set_symbol_point_or_polygon(self, layer):
         if layer.geometryType() == QgsWkbTypes.PolygonGeometry:
