@@ -809,7 +809,7 @@ class PublicTransitAnalysis:
 
             if start_or_end_station == "start":
                 # you run the programm with one specific endpoint.
-                selected_stations = all_stations[488] #TODO delete number to calculate all stations
+                selected_stations = all_stations# [488] #TODO delete number to calculate all stations
                 if not isinstance(selected_stations, list):
                     selected_stations = [selected_stations]
 
@@ -863,14 +863,13 @@ class PublicTransitAnalysis:
         layer_index = self.dlg.cb_layer_symbology.currentIndex()
         layer = layer_collection[layer_index]
         symbology_theme = self.dlg.cb_symbology_theme.currentIndex()
-
+        #TODO delete oepnv Gueteklassen (3) in qt designer and here
         if symbology_theme == 0: self.symbology_travel_time(layer)
         elif symbology_theme == 1: self.symbology_travel_time_ratio(layer)
         elif symbology_theme == 2: self.symbology_frequency(layer)
-        elif symbology_theme == 3: self.not_implemented_yet()
-        elif symbology_theme == 4: self.symbology_walk_time(layer)
-        elif symbology_theme == 5: self.symbology_walk_distance(layer)
-        elif symbology_theme == 6: self.symbology_transfer(layer)
+        elif symbology_theme == 3: self.symbology_walk_time(layer)
+        elif symbology_theme == 4: self.symbology_walk_distance(layer)
+        elif symbology_theme == 5: self.symbology_transfer(layer)
 
         # if self.dlg.cb_symbology_theme.itemData(2) == "travel_time":
         #     self.travel_time_symbology(layer)
@@ -1166,14 +1165,12 @@ class PublicTransitAnalysis:
     """
     def run(self):
         """Run method that performs all the real work"""
-        #console.show_console()
-        #print("hallo Welt")
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
             self.dlg = PublicTransitAnalysisDialog()
-            self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet)
+            self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet) #TODO add method
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
@@ -1199,5 +1196,5 @@ class PublicTransitAnalysis:
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
-        if result:
-            self.iface.messageBar().pushMessage("Until next time")
+        # if result:
+        #     self.iface.messageBar().pushMessage("Until next time")

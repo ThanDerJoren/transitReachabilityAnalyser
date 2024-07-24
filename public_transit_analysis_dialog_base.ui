@@ -13,512 +13,20 @@
   <property name="windowTitle">
    <string>Public Transit Analysis</string>
   </property>
-  <widget class="QGroupBox" name="groupBox">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>70</y>
-     <width>751</width>
-     <height>181</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>Vorbereitung</string>
-   </property>
-   <widget class="QWidget" name="layoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>30</y>
-      <width>711</width>
-      <height>104</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Der OTP server kann manuell gestartet werden oder von dem QGis Plugin. Dies kann einige Zeit in Anpsruch nehmen</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="rb_automatic_otp_start">
-       <property name="text">
-        <string>OTP automatisch starten</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="rb_otp_manually_started_8080">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="autoFillBackground">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>OTP manuell starten mit standard port number 8080</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QRadioButton" name="rb_otp_manually_started_changed_port">
-         <property name="text">
-          <string>OTP manuell starten mit manueller port number:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="le_port_number">
-         <property name="maxLength">
-          <number>4</number>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QPushButton" name="pb_start_check_OTP">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>150</y>
-      <width>241</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>start OTP/ check if OTP is running</string>
-    </property>
-   </widget>
-  </widget>
-  <widget class="QGroupBox" name="groupBox_3">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>310</y>
-     <width>901</width>
-     <height>621</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>OpenTripPlanner berechnungen</string>
-   </property>
-   <widget class="QWidget" name="layoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>30</y>
-      <width>872</width>
-      <height>580</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout_4">
-     <item>
-      <layout class="QFormLayout" name="formLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_10">
-         <property name="text">
-          <string>Dateipfad</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
-         <item>
-          <widget class="QLineEdit" name="le_filepath_itineraries"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pb_open_explorer_itineraries">
-           <property name="text">
-            <string>...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_9">
-         <property name="text">
-          <string>Layername</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="le_layer_name">
-         <property name="text">
-          <string>Hauptbahnhof Braunschweig</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Quelle</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>Lat:</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="le_lat_of_start_end">
-           <property name="text">
-            <string>52.25275668185875</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_8">
-           <property name="text">
-            <string>Lon:</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="le_lon_of_start_end">
-           <property name="text">
-            <string>10.539292742327776</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="9" column="0" colspan="2">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Untersuchungstag</string>
-         </property>
-        </widget>
-       </item>
-       <item row="10" column="1">
-        <widget class="QLineEdit" name="le_date">
-         <property name="text">
-          <string>2024-07-15</string>
-         </property>
-        </widget>
-       </item>
-       <item row="12" column="0" colspan="2">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Untersuchungszeitraum</string>
-         </property>
-        </widget>
-       </item>
-       <item row="14" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout_7">
-         <item>
-          <widget class="QLabel" name="label_12">
-           <property name="text">
-            <string>Von</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="le_time_start">
-           <property name="text">
-            <string>09:00</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_13">
-           <property name="text">
-            <string>bis</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="le_time_end">
-           <property name="text">
-            <string>12:00</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_8"/>
-     </item>
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_13">
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_5">
-           <item>
-            <widget class="QLabel" name="label_17">
-             <property name="text">
-              <string>choose walking speed:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_2kmh">
-             <property name="text">
-              <string>2,0km/h (e.g. Mobility aid users)</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walkspeed</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_3_5kmh">
-             <property name="text">
-              <string>3,5km/h (average speed &gt; 65 y/o)</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walkspeed</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_4_5kmh">
-             <property name="text">
-              <string>4,5km/h (average speed &lt;65 y/o)</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walkspeed</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_5_5kmh">
-             <property name="text">
-              <string>5,5km/h (brisk walking)</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walkspeed</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_6_5kmh">
-             <property name="text">
-              <string>6,5km/h (fast walking)</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walkspeed</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_personalised_speed">
-             <property name="text">
-              <string>personalised:</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walkspeed</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
-             <item>
-              <widget class="QLineEdit" name="le_personalized_tempo"/>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_15">
-               <property name="text">
-                <string>km/h</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_6">
-           <item>
-            <widget class="QLabel" name="label_18">
-             <property name="text">
-              <string>choose maximum walktime:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_19">
-             <property name="text">
-              <string>RTE stands for Residents, Jobs, Education</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>13</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_5min">
-             <property name="text">
-              <string>5min (e.g. Core area &gt; 300 RTE/km²)</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walktime</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_6min">
-             <property name="text">
-              <string>6min (e.g. High utilization density area 150-300 RTE/km²)</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walktime</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_10min">
-             <property name="text">
-              <string>10min (e.g. Low utilization density area &lt; 150 RTE/km²)</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walktime</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="rb_personalised_walktime">
-             <property name="text">
-              <string>personalised:</string>
-             </property>
-             <attribute name="buttonGroup">
-              <string notr="true">rb_group_walktime</string>
-             </attribute>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_10">
-             <item>
-              <widget class="QLineEdit" name="le_max_walking_time"/>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_16">
-               <property name="text">
-                <string>min</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_7">
-           <item>
-            <spacer name="verticalSpacer_2">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>78</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pb_calculate_walk_distance">
-             <property name="text">
-              <string>calculate maximum walkdistance</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_11">
-             <item>
-              <widget class="QLineEdit" name="le_max_walk_distance">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="label_21">
-               <property name="text">
-                <string>m</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pb_start_to_all_stations">
-         <property name="text">
-          <string>Quelle zu allen Stationen berechnen</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pb_get_stations_from_otp">
-         <property name="text">
-          <string>get all stations from otp and create layer</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pb_get_stops_from_otp">
-         <property name="text">
-          <string>get all stops from otp and create layer</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
-  </widget>
   <widget class="QGroupBox" name="groupBox_4">
    <property name="geometry">
     <rect>
-     <x>800</x>
-     <y>90</y>
-     <width>661</width>
+     <x>30</x>
+     <y>760</y>
+     <width>761</width>
      <height>201</height>
     </rect>
    </property>
+   <property name="locale">
+    <locale language="English" country="UnitedKingdom"/>
+   </property>
    <property name="title">
-    <string>Symbolisierung festlegen</string>
+    <string>Change Symbology</string>
    </property>
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
@@ -529,23 +37,36 @@
       <height>161</height>
      </rect>
     </property>
+    <property name="locale">
+     <locale language="English" country="UnitedKingdom"/>
+    </property>
     <layout class="QVBoxLayout" name="verticalLayout_3">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_6">
        <item>
         <widget class="QLabel" name="label_11">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
          <property name="text">
-          <string>Layer auswählen</string>
+          <string>choose layer</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QComboBox" name="cb_layer_symbology"/>
+        <widget class="QComboBox" name="cb_layer_symbology">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+        </widget>
        </item>
        <item>
         <widget class="QPushButton" name="pb_reload_layer_cb">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
          <property name="text">
-          <string>neu laden</string>
+          <string>reload</string>
          </property>
         </widget>
        </item>
@@ -555,46 +76,47 @@
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
         <widget class="QLabel" name="label_6">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
          <property name="text">
-          <string>Punktlayer Symbolisierung</string>
+          <string>choose indicator</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QComboBox" name="cb_symbology_theme">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
          <item>
           <property name="text">
-           <string>Reisezeit ÖPNV</string>
+           <string>travel time PT</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Reisezeitverhältnis ÖPNV/MIV</string>
+           <string>travel time ratio PT/CAR</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Takt</string>
+           <string>frequency</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>ÖV-Güteklasse</string>
+           <string>walktime</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Gehzeit</string>
+           <string>walkdistance</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Gehdistanz</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string comment="transfers">Umsteigehäufigkeit</string>
+           <string comment="transfers">transfer frequency</string>
           </property>
          </item>
         </widget>
@@ -603,10 +125,887 @@
      </item>
      <item>
       <widget class="QPushButton" name="pb_set_symbology">
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="locale">
+        <locale language="English" country="UnitedKingdom"/>
+       </property>
        <property name="text">
-        <string>Erstelle Symbolisierung</string>
+        <string>change symbology</string>
        </property>
       </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>10</y>
+     <width>761</width>
+     <height>731</height>
+    </rect>
+   </property>
+   <property name="locale">
+    <locale language="English" country="UnitedKingdom"/>
+   </property>
+   <property name="title">
+    <string>Reachability Analysis</string>
+   </property>
+   <widget class="QWidget" name="">
+    <property name="geometry">
+     <rect>
+      <x>31</x>
+      <y>23</y>
+      <width>671</width>
+      <height>511</height>
+     </rect>
+    </property>
+    <property name="locale">
+     <locale language="English" country="UnitedKingdom"/>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="3" column="0">
+        <layout class="QVBoxLayout" name="verticalLayout_5">
+         <item>
+          <widget class="QLabel" name="label_17">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>choose walking speed:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_2kmh">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>2,0km/h (e.g. Mobility aid users)</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walkspeed</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_3_5kmh">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>3,5km/h (average speed &gt; 65 y/o)</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walkspeed</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_4_5kmh">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>4,5km/h (average speed &lt;65 y/o)</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walkspeed</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_5_5kmh">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>5,5km/h (brisk walking)</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walkspeed</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_6_5kmh">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>6,5km/h (fast walking)</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walkspeed</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_personalised_speed">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>personalised:</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walkspeed</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <item>
+            <widget class="QLineEdit" name="le_personalized_tempo">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_15">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>km/h</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="2">
+        <layout class="QVBoxLayout" name="verticalLayout_9">
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Examination Period</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QFormLayout" name="formLayout_2">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_12">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>From</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_13">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>To</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="le_time_end">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>12:00</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="le_time_start">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>09:00</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="1">
+        <layout class="QVBoxLayout" name="verticalLayout_6">
+         <item>
+          <widget class="QLabel" name="label_18">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>choose maximum walktime:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_19">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>RTE stands for Residents, Jobs, Education</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>13</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_5min">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>5min (e.g. Core area &gt; 300 RTE/km²)</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walktime</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_6min">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>6min (e.g. High utilization density area 150-300 RTE/km²)</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walktime</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_10min">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>10min (e.g. Low utilization density area &lt; 150 RTE/km²)</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walktime</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rb_personalised_walktime">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>personalised:</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_walktime</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_10">
+           <item>
+            <widget class="QLineEdit" name="le_max_walking_time">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_16">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>min</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="1">
+        <layout class="QVBoxLayout" name="verticalLayout_8">
+         <item>
+          <widget class="QLabel" name="label_5">
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Examination Day</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QLineEdit" name="le_date">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>2024-07-15</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_3">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>18</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="2">
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <item>
+          <spacer name="verticalSpacer_2">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>78</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_calculate_walk_distance">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>calculate maximum walkdistance</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_11">
+           <item>
+            <widget class="QLineEdit" name="le_max_walk_distance">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_21">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>m</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="0">
+        <layout class="QVBoxLayout" name="verticalLayout_13">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Start  Location</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QFormLayout" name="formLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_7">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>Lat:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="le_lat_of_start_end">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>52.25275668185875</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_8">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>Lon:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="le_lon_of_start_end">
+             <property name="locale">
+              <locale language="English" country="UnitedKingdom"/>
+             </property>
+             <property name="text">
+              <string>10.539292742327776</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0" colspan="3">
+        <spacer name="verticalSpacer_4">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>598</width>
+           <height>18</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="Line" name="line">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line_2">
+       <property name="locale">
+        <locale language="English" country="UnitedKingdom"/>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_5">
+       <property name="locale">
+        <locale language="English" country="UnitedKingdom"/>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>598</width>
+         <height>18</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QFormLayout" name="formLayout_3">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="text">
+          <string>Filepath</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QLineEdit" name="le_filepath_itineraries">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_open_explorer_itineraries">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_9">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="text">
+          <string>Layername</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="le_layer_name">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="text">
+          <string>Hauptbahnhof Braunschweig</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line_3">
+       <property name="locale">
+        <locale language="English" country="UnitedKingdom"/>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_6">
+       <property name="locale">
+        <locale language="English" country="UnitedKingdom"/>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>598</width>
+         <height>18</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QFormLayout" name="formLayout_4">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="text">
+          <string>Which port number is the OTP server using?</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QRadioButton" name="rb_otp_manually_started_8080">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="text">
+          <string>default port number 8080</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">rb_group_otp_server</string>
+         </attribute>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QPushButton" name="pb_start_check_OTP">
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="text">
+          <string>test otp connection:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_8">
+         <item>
+          <widget class="QRadioButton" name="rb_otp_manually_started_changed_port">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>specify different port number:</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">rb_group_otp_server</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="le_port_number">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="maxLength">
+            <number>4</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="l_otp_connection_test">
+         <property name="autoFillBackground">
+          <bool>true</bool>
+         </property>
+         <property name="locale">
+          <locale language="English" country="UnitedKingdom"/>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::Box</enum>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line_4">
+       <property name="locale">
+        <locale language="English" country="UnitedKingdom"/>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>550</y>
+      <width>671</width>
+      <height>164</height>
+     </rect>
+    </property>
+    <property name="locale">
+     <locale language="English" country="UnitedKingdom"/>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout_12">
+     <item>
+      <widget class="QTextBrowser" name="textBrowser">
+       <property name="locale">
+        <locale language="English" country="UnitedKingdom"/>
+       </property>
+       <property name="html">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt; 🛈 &lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;For the following 3 buttons OTP has to be started manually over the terminal. &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;⚠&lt;/span&gt; The calculation of the reachability analysis will take several minutes. QGis is not usable during this time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_10">
+         <item>
+          <widget class="QPushButton" name="pb_get_stops_from_otp">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Get All Stops</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_get_stations_from_otp">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Get All Stations</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pb_start_to_all_stations">
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Reachability Analysis</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_11">
+         <item>
+          <widget class="QLabel" name="label_14">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Creates a point layer containing all stopping points from the OTP server.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_4">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Creates a point layer that consolidates all stops with the same name in one point.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_20">
+           <property name="locale">
+            <locale language="English" country="UnitedKingdom"/>
+           </property>
+           <property name="text">
+            <string>Creates a point layer with an Itinerary from the start point to each station.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
      </item>
     </layout>
    </widget>
@@ -614,118 +1013,20 @@
   <widget class="QDialogButtonBox" name="button_box">
    <property name="geometry">
     <rect>
-     <x>800</x>
-     <y>400</y>
+     <x>120</x>
+     <y>990</y>
      <width>341</width>
      <height>32</height>
     </rect>
+   </property>
+   <property name="locale">
+    <locale language="English" country="UnitedKingdom"/>
    </property>
    <property name="orientation">
     <enum>Qt::Horizontal</enum>
    </property>
    <property name="standardButtons">
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_14">
-   <property name="geometry">
-    <rect>
-     <x>960</x>
-     <y>620</y>
-     <width>141</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Gehgeschwindigkeit</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="cb_walking_speed">
-   <property name="geometry">
-    <rect>
-     <x>950</x>
-     <y>490</y>
-     <width>141</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="editable">
-    <bool>false</bool>
-   </property>
-   <property name="currentIndex">
-    <number>1</number>
-   </property>
-   <item>
-    <property name="text">
-     <string>Langsam 2 km/h</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>Standard 4 km/h</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>Schnell 6 km/h</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>Personalisiert:</string>
-    </property>
-   </item>
-  </widget>
-  <widget class="QLabel" name="label_4">
-   <property name="geometry">
-    <rect>
-     <x>950</x>
-     <y>530</y>
-     <width>121</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>max. Fußwegzeit</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="cb_max_walking_time">
-   <property name="geometry">
-    <rect>
-     <x>970</x>
-     <y>510</y>
-     <width>141</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <item>
-    <property name="text">
-     <string>Standard 17 min</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>Personalisiert:</string>
-    </property>
-   </item>
-  </widget>
-  <widget class="QLineEdit" name="le_message">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>10</y>
-     <width>1041</width>
-     <height>51</height>
-    </rect>
-   </property>
-   <property name="frame">
-    <bool>false</bool>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
    </property>
   </widget>
  </widget>
@@ -767,5 +1068,6 @@
  <buttongroups>
   <buttongroup name="rb_group_walkspeed"/>
   <buttongroup name="rb_group_walktime"/>
+  <buttongroup name="rb_group_otp_server"/>
  </buttongroups>
 </ui>
