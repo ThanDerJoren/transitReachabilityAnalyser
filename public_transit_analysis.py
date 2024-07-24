@@ -278,9 +278,7 @@ class PublicTransitAnalysis:
     """
 
     def check_grizzly_server_is_running(self):
-        if self.dlg.rb_automatic_otp_start.isChecked():
-            self.iface.messageBar().pushMessage("This is not implemented yet. \nYou have to choose another option")
-        elif self.dlg.rb_otp_manually_started_8080.isChecked():
+        if self.dlg.rb_otp_manually_started_8080.isChecked():
             url = "http://localhost:8080/"
             print(url)
         elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
@@ -297,11 +295,13 @@ class PublicTransitAnalysis:
             get = requests.get(url)
             # if the request succeeds
             if get.status_code == 200:
+                self.dlg.l_otp_connection_test.setText("connection to OTP server")
                 return True
             else:
                 return False
             # Exception
         except requests.exceptions.RequestException as e:
+            self.dlg.l_otp_connection_test.setText("no connection to OTP server")
             self.iface.messageBar().pushMessage("Grizzly server/ OpenTripPlanner is not running or runs on an different port")
             return False
 
@@ -863,7 +863,6 @@ class PublicTransitAnalysis:
         layer_index = self.dlg.cb_layer_symbology.currentIndex()
         layer = layer_collection[layer_index]
         symbology_theme = self.dlg.cb_symbology_theme.currentIndex()
-        #TODO delete oepnv Gueteklassen (3) in qt designer and here
         if symbology_theme == 0: self.symbology_travel_time(layer)
         elif symbology_theme == 1: self.symbology_travel_time_ratio(layer)
         elif symbology_theme == 2: self.symbology_frequency(layer)
@@ -1153,7 +1152,6 @@ class PublicTransitAnalysis:
     """
 
 
-
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
 
@@ -1170,7 +1168,7 @@ class PublicTransitAnalysis:
         if self.first_start == True:
             self.first_start = False
             self.dlg = PublicTransitAnalysisDialog()
-            self.dlg.pb_start_check_OTP.clicked.connect(self.not_implemented_yet) #TODO add method
+            self.dlg.pb_start_check_OTP.clicked.connect(self.check_grizzly_server_is_running)
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
