@@ -55,7 +55,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>2,0km/h (e.g. Mobility aid users)</string>
+             <string>2.0km/h (e.g. Mobility aid users)</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walkspeed</string>
@@ -68,7 +68,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>3,5km/h (average speed &gt; 65 y/o)</string>
+             <string>3.5km/h (average speed &gt; 65 y/o)</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walkspeed</string>
@@ -81,7 +81,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>4,5km/h (average speed &lt;65 y/o)</string>
+             <string>4.5km/h (average speed &lt;65 y/o)</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -97,7 +97,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>5,5km/h (brisk walking)</string>
+             <string>5.5km/h (brisk walking)</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walkspeed</string>
@@ -110,7 +110,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>6,5km/h (fast walking)</string>
+             <string>6.5km/h (fast walking)</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walkspeed</string>
@@ -740,6 +740,9 @@
           <property name="frameShape">
            <enum>QFrame::Box</enum>
           </property>
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
+          </property>
           <property name="text">
            <string/>
           </property>
@@ -1005,8 +1008,8 @@
  <resources/>
  <connections/>
  <buttongroups>
+  <buttongroup name="rb_group_walktime"/>
   <buttongroup name="rb_group_otp_server"/>
   <buttongroup name="rb_group_walkspeed"/>
-  <buttongroup name="rb_group_walktime"/>
  </buttongroups>
 </ui>

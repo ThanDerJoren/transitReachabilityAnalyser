@@ -31,10 +31,9 @@ sys.path.append('C:\\OSGeo4W64\\apps\\qgis\\python\\plugins')
 from qgis.core import *
 from qgis.gui import *
 
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant #TODO ist QgsVectorLayer an der richtigen Stelle importiert?
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.PyQt.QtWidgets import QAction, QFileDialog
-from qgis.core import QgsProject, QgsVectorLayer, QgsPalLayerSettings, QgsTextFormat, QgsVectorLayerSimpleLabeling
 from qgis.core import QgsStyle, QgsColorRamp, QgsColorRampShader #for a color ramp
 from qgis.core import QgsLayerTreeLayer, QgsLayerTreeGroup #to load all layers, also those in groups
 from qgis.core import QgsWkbTypes, QgsFillSymbol, QgsSimpleLineSymbolLayer # to set the polygon line to zero
@@ -47,12 +46,20 @@ from .stop import Stop
 from .station import Station
 from .route import Route
 from .referencePoint import ReferencePoint
-import sys
 import requests, json
 import geopandas as gpd
 import pandas as pd
-import processing # to merge polygons by position
-from colour import Color # for colour gradients
+
+# This is needed to create own graduated symbol renderer
+from qgis.PyQt import QtGui
+
+
+# Initialize Qt resources from file resources.py
+from .resources import *
+# Import the code for the dialog
+from .public_transit_analysis_dialog import PublicTransitAnalysisDialog
+import os.path
+
 
 # downloaded for symbology, don't know which packages I really need: https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/vector.html#appearance-symbology-of-vector-layers
 from qgis.core import (
@@ -112,18 +119,6 @@ from qgis.core import (
 )
 
 
-from qgis.core.additions.edit import edit
-
-
-# This is needed to create own graduated symbol renderer
-from qgis.PyQt import QtGui
-
-
-# Initialize Qt resources from file resources.py
-from .resources import *
-# Import the code for the dialog
-from .public_transit_analysis_dialog import PublicTransitAnalysisDialog
-import os.path
 
 
 class PublicTransitAnalysis:
