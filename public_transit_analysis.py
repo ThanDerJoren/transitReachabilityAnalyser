@@ -692,7 +692,6 @@ class PublicTransitAnalysis:
 
     def create_itineraries_from_start_to_each_station(self, station_collection, analysis_parameters: ReferencePoint, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
         all_itineraries = []
-        # first try: find from the start an itinerary to every station
         for item_index, station in enumerate(station_collection):
             time_itineraries_one_station = datetime.now()
             station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection, url=self.get_request_url())
@@ -804,7 +803,7 @@ class PublicTransitAnalysis:
 
             if start_or_end_station == "start":
                 # you run the programm with one specific endpoint.
-                selected_stations = all_stations# [488] #TODO delete number to calculate all stations
+                selected_stations = all_stations# [488]
                 if not isinstance(selected_stations, list):
                     selected_stations = [selected_stations]
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ui version="4.0">
+<ui version="4.0" idbasedtr="true">
  <class>PublicTransitAnalysisDialogBase</class>
  <widget class="QDialog" name="PublicTransitAnalysisDialogBase">
   <property name="geometry">
@@ -12,6 +12,9 @@
   </property>
   <property name="windowTitle">
    <string>Public Transit Analysis</string>
+  </property>
+  <property name="locale">
+   <locale language="English" country="UnitedKingdom"/>
   </property>
   <widget class="QGroupBox" name="groupBox_2">
    <property name="geometry">
@@ -157,6 +160,9 @@
          <layout class="QVBoxLayout" name="verticalLayout_9">
           <item>
            <widget class="QLabel" name="label_3">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
             <property name="font">
              <font>
               <weight>75</weight>
@@ -199,6 +205,9 @@
                <locale language="English" country="UnitedKingdom"/>
               </property>
               <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
                <string>12:00</string>
               </property>
              </widget>
@@ -209,6 +218,9 @@
                <locale language="English" country="UnitedKingdom"/>
               </property>
               <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
                <string>09:00</string>
               </property>
              </widget>
@@ -366,6 +378,9 @@
                <locale language="English" country="UnitedKingdom"/>
               </property>
               <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
                <string>2024-07-15</string>
               </property>
              </widget>
@@ -483,6 +498,9 @@
                <locale language="English" country="UnitedKingdom"/>
               </property>
               <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
                <string>52.25275668185875</string>
               </property>
              </widget>
@@ -503,6 +521,9 @@
                <locale language="English" country="UnitedKingdom"/>
               </property>
               <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
                <string>10.539292742327776</string>
               </property>
              </widget>
@@ -626,7 +647,10 @@
            <locale language="English" country="UnitedKingdom"/>
           </property>
           <property name="text">
-           <string>Hauptbahnhof Braunschweig</string>
+           <string/>
+          </property>
+          <property name="placeholderText">
+           <string>main station Braunschweig</string>
           </property>
          </widget>
         </item>
