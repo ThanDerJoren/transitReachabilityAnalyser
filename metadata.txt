@@ -5,15 +5,14 @@
 [general]
 name=Transit Reachability Analyser
 qgisMinimumVersion=3.0
-description=Calculation of reachability from a starting point to all stops in a GTFS feed using OpenTripPlanner. The results can be displayed as a heatmap. Reachability is represented using the indicators travel time, travel time ratio, frequency, walking time, and transfer count.
+description=Using OpenTripPlanner to calculate public transport reachability from a starting point to all stops in a GTFS feed.
 version=0.1
 author=Julek Weck
 email=j.weck@tu-braunschweig.de
 
-about=With the Transit Reachability Analyser plugin, public transport reachability can be calculated and visualized. The fastest connection from a starting point to each station in the public transport network is determined using OpenTripPlanner. As a result, a point layer with an attribute table is created, providing various information for each station. This includes travel effort indicators such as travel time, travel time ratio, walking time, and walking distance to the first stop, as well as transfer count. Additionally, the attribute table displays the chosen connection and other possible connections. For each travel effort indicator, the plugin provides a color scheme to color the point layer. If a polygon layer is generated based on the point layer, it can also be colored in the various color schemes provided by the plugin.
+about=With the Transit Reachability Analyser plugin, one can calculate and visualize the reachability of public transport. The itineraries are calculated by OpenTripPlanner. As a result, a point layer with an attribute table is created, providing various information for each station. The results can be displayed as a heatmap. If a polygon layer is generated based on the point layer, it can also be colored in the various color schemes provided by the plugin. Reachability is represented using the indicators travel time, travel time ratio, frequency, walking time, and transfer count.
 
-
-tracker=http://bugs
+tracker=https://github.com/ThanDerJoren/transitReachabilityAnalyser/issues
 repository=https://github.com/ThanDerJoren/transitReachabilityAnalyser.git
 # End of mandatory metadata
 
@@ -24,9 +23,9 @@ hasProcessingProvider=no
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=public transport, accessibility, gtfs, opentripplanner, heatmap, network analysis, street network, mobility, urban planning, analysis, isochrones, routing, transportation, otp
 
-homepage=http://homepage
+homepage=https://github.com/ThanDerJoren/transitReachabilityAnalyser.git
 category=Plugins
 icon=icon.png
 # experimental flag
