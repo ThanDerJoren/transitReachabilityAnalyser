@@ -14,7 +14,7 @@ about=With the Transit Reachability Analyser plugin, public transport reachabili
 
 
 tracker=http://bugs
-repository=http://repo
+repository=https://github.com/ThanDerJoren/transitReachabilityAnalyser.git
 # End of mandatory metadata
 
 # Recommended items:
