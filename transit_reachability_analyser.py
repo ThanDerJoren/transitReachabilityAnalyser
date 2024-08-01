@@ -57,7 +57,7 @@ from qgis.PyQt import QtGui
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
-from .public_transit_analysis_dialog import PublicTransitAnalysisDialog
+from .transit_reachability_analyser_dialog import TransitReachabilityAnalyserDialog
 import os.path
 
 
@@ -121,7 +121,7 @@ from qgis.core import (
 
 
 
-class PublicTransitAnalysis:
+class TransitReachabilityAnalyser:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -141,7 +141,7 @@ class PublicTransitAnalysis:
         locale_path = os.path.join(
             self.plugin_dir,
             'i18n',
-            'PublicTransitAnalysis_{}.qm'.format(locale))
+            'TransitReachabilityAnalyser_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -150,7 +150,7 @@ class PublicTransitAnalysis:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&Public Transit Analysis')
+        self.menu = self.tr(u'&Transit Reachability Analyser')
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
@@ -169,7 +169,7 @@ class PublicTransitAnalysis:
         :rtype: QString
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('PublicTransitAnalysis', message)
+        return QCoreApplication.translate('TransitReachabilityAnalyser', message)
 
 
     def add_action(
@@ -249,10 +249,10 @@ class PublicTransitAnalysis:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/public_transit_analysis/icon.png'
+        icon_path = f'{self.plugin_dir}/icon.png'#':/plugins/transit_reachability_analyser/icon.png' Forum: https://gis.stackexchange.com/a/457606
         self.add_action(
             icon_path,
-            text=self.tr(u'Public Transit Analysis'),
+            text=self.tr(u'Transit Reachability Analyser'),
             callback=self.run,
             parent=self.iface.mainWindow())
 
@@ -264,7 +264,7 @@ class PublicTransitAnalysis:
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(
-                self.tr(u'&Public Transit Analysis'),
+                self.tr(u'&Transit Reachability Analyser'),
                 action)
             self.iface.removeToolBarIcon(action)
 
@@ -803,7 +803,7 @@ class PublicTransitAnalysis:
 
             if start_or_end_station == "start":
                 # you run the programm with one specific endpoint.
-                selected_stations = all_stations# [488]
+                selected_stations = all_stations[488] #TODO delete the number
                 if not isinstance(selected_stations, list):
                     selected_stations = [selected_stations]
 
@@ -1161,7 +1161,7 @@ class PublicTransitAnalysis:
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
-            self.dlg = PublicTransitAnalysisDialog()
+            self.dlg = TransitReachabilityAnalyserDialog()
             self.dlg.pb_start_check_OTP.clicked.connect(self.check_grizzly_server_is_running)
             self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))

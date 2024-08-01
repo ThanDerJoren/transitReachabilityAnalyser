@@ -1,7 +1,7 @@
 #/***************************************************************************
-# PublicTransitAnalysis
+# TransitReachabilityAnalyser
 #
-# Heatmap to visualize the connection from one place to all stops of a public Transport net
+# Calculation of reachability from a starting point to all stops in a GTFS feed using OpenTripPlanner. The results can be displayed as a heatmap. Reachability is represented using the indicators travel time, travel time ratio, frequency, walking time, and transfer count.
 #							 -------------------
 #		begin				: 2024-05-14
 #		git sha				: $Format:%H$
@@ -38,15 +38,15 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	public_transit_analysis.py public_transit_analysis_dialog.py
+	transit_reachability_analyser.py transit_reachability_analyser_dialog.py
 
-PLUGINNAME = public_transit_analysis
+PLUGINNAME = transit_reachability_analyser
 
 PY_FILES = \
 	__init__.py \
-	public_transit_analysis.py public_transit_analysis_dialog.py
+	transit_reachability_analyser.py transit_reachability_analyser_dialog.py
 
-UI_FILES = public_transit_analysis_dialog_base.ui
+UI_FILES = transit_reachability_analyser_dialog_base.ui
 
 EXTRAS = metadata.txt icon.png
 

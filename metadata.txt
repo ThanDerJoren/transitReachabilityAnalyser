@@ -3,14 +3,15 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=Public Transit Analysis
+name=Transit Reachability Analyser
 qgisMinimumVersion=3.0
-description=Heatmap to visualize the connection from one place to all stops of a public Transport net
+description=Calculation of reachability from a starting point to all stops in a GTFS feed using OpenTripPlanner. The results can be displayed as a heatmap. Reachability is represented using the indicators travel time, travel time ratio, frequency, walking time, and transfer count.
 version=0.1
 author=Julek Weck
 email=j.weck@tu-braunschweig.de
 
-about=Heatmap to visualize the connection from one place to all stops of the public transport net TODO: More details at the end
+about=With the Transit Reachability Analyser plugin, public transport reachability can be calculated and visualized. The fastest connection from a starting point to each station in the public transport network is determined using OpenTripPlanner. As a result, a point layer with an attribute table is created, providing various information for each station. This includes travel effort indicators such as travel time, travel time ratio, walking time, and walking distance to the first stop, as well as transfer count. Additionally, the attribute table displays the chosen connection and other possible connections. For each travel effort indicator, the plugin provides a color scheme to color the point layer. If a polygon layer is generated based on the point layer, it can also be colored in the various color schemes provided by the plugin.
+
 
 tracker=http://bugs
 repository=http://repo

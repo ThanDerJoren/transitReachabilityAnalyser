@@ -18,7 +18,7 @@ from qgis.PyQt.QtGui import QIcon
 
 
 
-class PublicTransitAnalysisDialogTest(unittest.TestCase):
+class TransitReachabilityAnalyserDialogTest(unittest.TestCase):
     """Test rerources work."""
 
     def setUp(self):
@@ -36,7 +36,7 @@ class PublicTransitAnalysisDialogTest(unittest.TestCase):
         self.assertFalse(icon.isNull())
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(PublicTransitAnalysisResourcesTest)
+    suite = unittest.makeSuite(TransitReachabilityAnalyserResourcesTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
 

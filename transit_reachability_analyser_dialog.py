@@ -29,13 +29,13 @@ from qgis.PyQt import QtWidgets
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'public_transit_analysis_dialog_base.ui'))
+    os.path.dirname(__file__), 'transit_reachability_analyser_dialog_base.ui'))
 
 
-class PublicTransitAnalysisDialog(QtWidgets.QDialog, FORM_CLASS):
+class TransitReachabilityAnalyserDialog(QtWidgets.QDialog, FORM_CLASS):
     def __init__(self, parent=None):
         """Constructor."""
-        super(PublicTransitAnalysisDialog, self).__init__(parent)
+        super(TransitReachabilityAnalyserDialog, self).__init__(parent)
         # Set up the user interface from Designer through FORM_CLASS.
         # After self.setupUi() you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see

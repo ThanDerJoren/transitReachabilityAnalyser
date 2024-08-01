@@ -32,5 +32,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     #
-    from .public_transit_analysis import PublicTransitAnalysis
-    return PublicTransitAnalysis(iface)
+    from .transit_reachability_analyser import TransitReachabilityAnalyser
+    return TransitReachabilityAnalyser(iface)

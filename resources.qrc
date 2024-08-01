@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/plugins/public_transit_analysis" >
+    <qresource prefix="/plugins/transit_reachability_analyser" >
         <file>icon.png</file>
     </qresource>
 </RCC>
