@@ -25,7 +25,10 @@
 
 from datetime import time, date, datetime
 class ReferencePoint:
-
+    """
+    There is always only one object of this class. It contains all parameters set in the GUI.
+    Additional variables, derived from the GUI parameters, are also present.
+    """
 
     def __init__(self, lat, lon, day, time_start, time_end, walk_speed, max_walking_time, layer_name, filepath):
         self.__incorrect_input = False
@@ -38,6 +41,7 @@ class ReferencePoint:
         self.walk_speed = walk_speed
         self.max_walking_time = max_walking_time
         self.catchment_area = self.calculate_distance(self.walk_speed, self.max_walking_time)
+        #collection of all stops in the catchment area of the reference point. Find them step-by-step over the itineraries.
         self.__first_possible_stops = []
         self.search_window = self.calculate_search_window()
 
@@ -169,7 +173,6 @@ class ReferencePoint:
     def calculate_distance(self, speed, duration):
         distance = speed*duration
         return distance
-
 
 
     def get_first_possible_stops(self):

@@ -25,12 +25,19 @@
 from datetime import time, datetime
 from .referencePoint import ReferencePoint
 class Route:
+    """
+    Every object contains all departure times of one line at one stop in the given search window.
+    This is comparable with the timetable of a line at a bus stop.
+
+    This can be used to calculate the frequency of one line.
+    For future developements this can be used for the Austrian 'public transport quality classes'.
+    """
     def __init__(self, gtfsId, shortName, stopId):
         self.gtfs_id = gtfsId
         self.short_name = shortName
         self.related_stop_gtfs_id = stopId
         self.__frequency = None
-        self.__departure_times = [] #only the departures between analysis_parameters.time_start to analysis_parameters.time_end
+        self.__departure_times = [] #only the departures inside the search window
 
     @property
     def frequency(self):

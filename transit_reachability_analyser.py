@@ -275,6 +275,8 @@ class TransitReachabilityAnalyser:
     def query_all_stops_incl_departure_times(self, analysis_parameters:ReferencePoint):
         unix_timestamp = int(datetime.timestamp(datetime.combine(analysis_parameters.day, analysis_parameters.time_start)))
         time_range = analysis_parameters.search_window
+        #the number of departures is depending on the time range and the frequency of the departures
+        #To get all departures, even of long time ranges and short frequencies, the value is randomly high.
         plan = f"""
             {{stops {{
                 gtfsId
@@ -314,19 +316,16 @@ class TransitReachabilityAnalyser:
         else:
             self.iface.messageBar().pushMessage("The filepath has to be selected first")
             return
-        #get walkspeed
+
         if not self.get_walk_speed():
             return
         else:
             walk_speed = self.get_walk_speed()
-        #get walktime
+
         if not self.get_max_walk_time():
             return
         else:
             max_walking_time = self.get_max_walk_time()
-
-
-
         analysis_parameters = ReferencePoint(
             #TODO make the try except statements not in the setter of RererencePoint, but in this method
             # TODO how to end the code, if except in try except
@@ -350,8 +349,8 @@ class TransitReachabilityAnalyser:
         all_routes = []
         for stop in queried_stops:
             route_objects = []
-            # first I have to create an object of all possible routes
-            # then I can add the departure times to the corresponding routes
+            # create a route object for every line which departs at this specific stop
+            # the gtfsID of the stop is important too now to which stop the route objet belongs
             for stop_times in stop["stoptimesWithoutPatterns"]:
                 route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
                 route_shortName = stop_times["trip"]["route"]["shortName"]
@@ -363,6 +362,7 @@ class TransitReachabilityAnalyser:
                 if not(route_already_created):
                     obj = Route(route_gtfsId, route_shortName, stop["gtfsId"])
                     route_objects.append(obj)
+            # add the departure times to the related route object
             for stop_times in stop["stoptimesWithoutPatterns"]:
                 route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
                 seconds_since_midnight = stop_times["scheduledDeparture"]
@@ -388,6 +388,7 @@ class TransitReachabilityAnalyser:
                 related_stops.append(element)
             else:
                 station = Station(current_stop_name, related_stops.copy())
+                #The runtime will be about 10s longer in total if the distance calculation is enabled
                 station.calculate_max_distance_station_to_stop(self.get_request_url())
                 station_collection.append(station)
                 current_stop_name = element.name
@@ -395,35 +396,15 @@ class TransitReachabilityAnalyser:
                 related_stops.append(element)
         return station_collection
 
-    def create_itineraries_from_start_to_each_station(self, station_collection, analysis_parameters: ReferencePoint, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
-        all_itineraries = []
-        for item_index, station in enumerate(station_collection):
-            time_itineraries_one_station = datetime.now()
-            station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection, url=self.get_request_url())
-            print('     query and create Itineraries for one station: {}'.format(datetime.now() - time_itineraries_one_station))
-            time_filter_itineraries = datetime.now()
-            station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
-            all_itineraries.extend(station.queried_itineraries)
-            for itinerary in station.itineraries_with_permissible_catchment_area:
-                analysis_parameters.add_first_possible_stop(itinerary.first_stop)
-                #itinerary.frequency = itinerary.calculate_frequency(route_collection) #alternative frequency calculation
-            station.filter_shortest_itinerary()
-            print('     filter catchment area: {}'.format(datetime.now() - time_filter_itineraries))
-        analysis_parameters.remove_empty_entries_in_first_possible_stops() # because of the declaration of stat_station, there can be empty strings in possible_start_station
-        time_traveltime_ratio = datetime.now()
-        for station in station_collection:
-            station.calculate_travel_time_ratio(analysis_parameters, "start", url=self.get_request_url())
-        print('     traveltime ratio: {}'.format(datetime.now() - time_traveltime_ratio))
-
     def create_dataframe_with_station_attributes(self, station_collection, analysis_parameters:ReferencePoint):
         """
         Codes of the negative numbers:
         -1: there is no Itinerary to/from this station -> not reachable
-        -2: This is the point to which/ from which every itinerary goes
-
+        -2: This is the point to which/ from which every itinerary goes (referencePoint)
+        The renderer used in the symbology methods needs a numeric value to show a point.
         """
 
-        # The first row of the data frame will be the point to which/ from which every itinerary goes
+        # The first row of the data frame will be the referencePoint
         name_collection = ["Reference Point"]
         trip_time_collection = [-2]
         car_driving_time_collection = [-2]
@@ -605,7 +586,7 @@ class TransitReachabilityAnalyser:
         lat_collection = []
         lon_collection = []
         if analysis_parameters is not None:
-            print("analysis_parameters an export_stations_as_geopackage übergeben")
+            #this adds the referencePoint to the Pointlayer
             lat_collection.append(analysis_parameters.lat)
             lon_collection.append(analysis_parameters.lon)
         else:
@@ -625,7 +606,7 @@ class TransitReachabilityAnalyser:
         mean_lat_collection = []
         mean_lon_collection = []
         if analysis_parameters is not None:
-            print("analysis_parameters an export_stations_as_geopackage übergeben")
+            #this adds the referencePoint to the Pointlayer
             mean_lat_collection.append(analysis_parameters.lat)
             mean_lon_collection.append(analysis_parameters.lon)
         else:
@@ -965,27 +946,18 @@ class TransitReachabilityAnalyser:
             layer_name = os.path.splitext(os.path.basename(filename))[0]
             self.dlg.le_layer_name.setText(layer_name)
 
-    def stops_with_departure_times_from_otp_to_gpkg(self):
-        print("master Branch")
-
-        #runtime: about 2s
+    def stops_and_departure_times_from_otp_to_gpkg(self):
         if self.check_grizzly_server_is_running():
             start_time = datetime.now()
             analysis_parameters = self.create_request_object()
-            time_stop_query = datetime.now()
             all_stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
-            print('stop query: {}'.format(datetime.now() - time_stop_query))
-            time_stop_creation = datetime.now()
             all_stops, all_routes = self.create_stop_and_route_objects(all_stops_as_dict, analysis_parameters)
-            print('stop creation: {}'.format(datetime.now() - time_stop_creation))
             self.export_stops_as_geopackage(all_stops, analysis_parameters=analysis_parameters)
             print('Duration: {}'.format(datetime.now() - start_time))
         else:
             return
 
     def stations_from_otp_to_gpkg(self):
-        #runtime: about 2s
-        #runtime incl calculate_max_distance_station_to_stop for each station: 11s
         if self.check_grizzly_server_is_running():
             start_time = datetime.now()
             analysis_parameters = self.create_request_object()
@@ -998,41 +970,48 @@ class TransitReachabilityAnalyser:
         else:
             return
 
-    def itineraries_data_from_otp_to_geopackage(self, start_or_end_station):
-        #runtime: about 18min
+    def reachability_analysis_to_geopackage(self, start_or_end_station):
+        #runtime: several minutes
         start_time = datetime.now()
         if self.check_grizzly_server_is_running():
-            time_reference_object = datetime.now()
+            #create Station objects
             analysis_parameters = self.create_request_object()
-            print('create referenceObject: {}'.format(datetime.now() - time_reference_object))
-            time_create_stops = datetime.now()
             stops_as_dict = self.query_all_stops_incl_departure_times(analysis_parameters=analysis_parameters)
             all_stops, all_routes = self.create_stop_and_route_objects(stops_as_dict, analysis_parameters)
-            print('create stops: {}'.format(datetime.now() - time_create_stops))
-            time_create_stations = datetime.now()
             all_stations = self.create_stations(all_stops)
-            print('create stations: {}'.format(datetime.now() - time_create_stations))
-
+            # check if the referencePoint is the start or the end of the itinerary
             if start_or_end_station == "start":
-                # you run the programm with one specific endpoint.
-                selected_stations = all_stations[488] #TODO delete the number
+                # During the developement you can reduce the stations to be calculated
+                # In this way you can check if the code work with shorter runtime
+                # If you choose only one station you have to make a list again, so that some methods can iterate over
+                    # the element
+                selected_stations = all_stations #[488]
                 if not isinstance(selected_stations, list):
                     selected_stations = [selected_stations]
-
-                time_all_Itineraries = datetime.now()
-                self.create_itineraries_from_start_to_each_station(selected_stations, analysis_parameters, all_routes)
-                print('create all Itineraries: {}'.format(datetime.now() - time_all_Itineraries))
-                time_export_layer = datetime.now()
+                # query and filter the Itineraries
+                for item_index, station in enumerate(selected_stations):
+                    queried_itineraries = station.query_transit_itineraries(analysis_parameters, "start",
+                                                      url=self.get_request_url())
+                    station.create_transit_itinerary_objects(queried_itineraries)
+                    station.filter_itineraries_with_permissible_catchment_area("start",
+                                                                               analysis_parameters.catchment_area)
+                    for itinerary in station.itineraries_with_permissible_catchment_area:
+                        analysis_parameters.add_first_possible_stop(itinerary.first_stop)
+                        # itinerary.frequency = itinerary.calculate_frequency(route_collection) #alternative frequency calculation
+                    station.filter_fastest_itinerary()
+                    station.set_indicators_of_itinerary(analysis_parameters, "start", url=self.get_request_url())
+                # because of the declaration of start_station, there are empty strings in possible_start_station
+                analysis_parameters.remove_empty_entries_in_first_possible_stops()
                 self.export_stations_as_geopackage(selected_stations, analysis_parameters=analysis_parameters)
-                print('export to layer: {}'.format(datetime.now() - time_export_layer))
 
             elif start_or_end_station == "end":
                 #end = {"lat": lat, "lon":  lon}
                 self.not_implemented_yet()
-            end_time = datetime.now()
-            print('Duration: {}'.format(end_time - start_time))
+
         else:
             return
+        end_time = datetime.now()
+        print('Duration: {}'.format(end_time - start_time))
 
     def set_default_symbology(self):
         root = QgsProject.instance().layerTreeRoot()
@@ -1077,9 +1056,9 @@ class TransitReachabilityAnalyser:
             self.dlg.pb_start_check_OTP.clicked.connect(self.check_grizzly_server_is_running)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
             #calculation buttons
-            self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
+            self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_and_departure_times_from_otp_to_gpkg)
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
-            self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
+            self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.reachability_analysis_to_geopackage("start"))
             #symbology buttons
             self.dlg.pb_reload_layer_cb.clicked.connect(self.load_layers_in_combobox)
             self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)

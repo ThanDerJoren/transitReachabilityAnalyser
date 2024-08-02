@@ -24,6 +24,13 @@
 from .route import Route
 
 class Stop:
+    """
+    There will be a stop object for every stop in the GTFS Feed.
+    Based on these objects, the stations objects will be created.
+
+    The vehicle mode will be important for future developments, when one use different catchment areas for different vehicle modes.
+    """
+
 
     def __init__(self, name, gtfsId, lat, lon, vehicleMode, relatedRoutes):
         self.name = name
