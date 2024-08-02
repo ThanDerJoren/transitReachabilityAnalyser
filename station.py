@@ -23,17 +23,13 @@
 """
 
 import json
-#import datetime
 import requests
-
-
-from shapely.geometry import Polygon
 from datetime import timedelta, datetime
 
-from .stop import Stop # used in relatedStops
+from .stop import Stop # Don't delete! Used in relatedStops
 from .itinerary import Itinerary
 from .referencePoint import ReferencePoint
-import geopy.distance # TODO find an alternative, which is already installed in qgis python
+import geopy.distance
 class Station:
 
 
@@ -41,7 +37,7 @@ class Station:
 
     def __init__(self, name, related_stops):
         self.name = name
-        self.related_stops = related_stops.copy()  # pass by value? That's important
+        self.related_stops = related_stops.copy()
         self.mean_lat = 0.0
         self.mean_lon = 0.0
         for stop in self.related_stops:
@@ -49,7 +45,6 @@ class Station:
             self.mean_lon += stop.lon
         self.mean_lat = self.mean_lat / len(self.related_stops)
         self.mean_lon = self.mean_lon / len(self.related_stops)
-        self.isochrone: Polygon
         self.max_distance_station_to_stop = None
 
         self.trip_time: float = None
@@ -79,7 +74,6 @@ class Station:
         else:
             print("the passed value for start_or_end_station has to be either 'start' or 'end' ")
             return
-        #TODO find a good walk reluctance, so more stations are reachable
         plan = f"""
             {{plan(
                 date: {day},
@@ -243,24 +237,24 @@ class Station:
         queriedPlan = requests.post(url, json={"query": plan})
         queriedPlan = json.loads(queriedPlan.content)
         for itinerary in queriedPlan["data"]["plan"]["itineraries"]:
-            self.car_driving_time = itinerary["duration"]/60 + 5# seconds in minutes TODO 5 minutes for walking to car and search time
+            #An additional 5 minutes will be added for the time needed to prepare the car and for travel delays due to heavy traffic.
+            self.car_driving_time = itinerary["duration"]/60 + 5 #seconds in minutes
 
     def filter_itineraries_with_permissible_catchment_area(self, start_or_end_station, catchment_area):
-        # TODO check if this new if-statement works
         # the allowed walk distance is used over the whole trip
         # if start_or_end_station =="start":
         #     for itinerary in self.queried_itineraries:
         #         if itinerary.walk_distance <= catchment_area:
         #             self.itineraries_with_permissible_catchment_area.append(itinerary)
 
-        # the allowed walk distance is ony used for the first walk distance
+        # the allowed walk distance is only used for the first walk distance
         if start_or_end_station == "start":
             for itinerary in self.queried_itineraries:
                 if len(itinerary.modes) == 1 and itinerary.modes[0] == "WALK" and itinerary.meters_first_stop <= catchment_area:
                     #to ensure, that the possible start stations also are reachable. The next if statement would rule out an only walk itinerary
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
-                #TODO this behavior has to be changed if the end point aren't Stations anymore
-                #   then it doesn't make sense anymore to check if the enpoint has the same name as the last stop
+                #the following behavior has to be changed if the end point aren't Stations anymore
+                #   then it doesn't make sense anymore to check if the endpoint has the same name as the last stop
                 if itinerary.meters_first_stop <= catchment_area and self.name == itinerary.last_stop: # to make sure, that itinerary ends at this exact station and you don't have to walk the last part
                     self.itineraries_with_permissible_catchment_area.append(itinerary)
         elif start_or_end_station == "end":

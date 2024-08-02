@@ -26,7 +26,7 @@
 from datetime import time, date, datetime
 class ReferencePoint:
 
-    #TODO how to end the code, if except in try except
+
     def __init__(self, lat, lon, day, time_start, time_end, walk_speed, max_walking_time, layer_name, filepath):
         self.__incorrect_input = False
         self.__error_message = ""
@@ -34,19 +34,15 @@ class ReferencePoint:
         self.lon = lon
         self.day = day
         self.time_start = time_start
-        #realistisch gesehen ist time_end die letzte ZEit zum lsofahren
-        self.time_end = time_end #TODO ist das die letzte ZEit zum losfahren oder die letzte ZEit zum ankommen?
+        self.time_end = time_end
         self.walk_speed = walk_speed
         self.max_walking_time = max_walking_time
         self.catchment_area = self.calculate_distance(self.walk_speed, self.max_walking_time)
         self.__first_possible_stops = []
-        self.quality_category = 500
         self.search_window = self.calculate_search_window()
 
         self.layer_name = layer_name #I dind't make a property and setter method
         self.filepath = filepath #I dind't make a property and setter method
-    #TODO will I use the setter after the construction of an objet again? Then it is not a good idea to do the converting inside the setter
-
     @property
     def lat(self):
         return self.__lat
@@ -159,13 +155,6 @@ class ReferencePoint:
     def error_message(self):
         return self.__error_message
 
-    @property
-    def quality_category(self):
-        return self.__quality_category
-    @quality_category.setter
-    def quality_category(self, value:float):
-        self.__quality_category = value
-
     def calculate_search_window(self):
         diff = datetime.combine(self.day, self.time_end) - datetime.combine(self.day, self.time_start)
         diff = diff.total_seconds()
@@ -193,16 +182,4 @@ class ReferencePoint:
     def remove_empty_entries_in_first_possible_stops(self):
         while "" in self.__first_possible_stops:
             self.__first_possible_stops.remove("")  # because of the declaration of stat_station, there can be empty strings in possible_start_station
-
-    def get_letter_of_quality_category(self):
-        """
-        something like
-        0<x<1 = A
-        1<=x<1,5 = B
-        so I want to change from values to letters at this point
-        developement example:
-        """
-        if self.__quality_category == 500:
-            return "Z"
-
 

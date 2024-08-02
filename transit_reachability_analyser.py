@@ -24,36 +24,21 @@
 """
 import math
 
-import sys
-import os
-sys.path.append('C:\\OSGeo4W64\\apps\\qgis\\python')
-sys.path.append('C:\\OSGeo4W64\\apps\\qgis\\python\\plugins')
-
-from qgis.core import *
-from qgis.gui import *
-
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
-from qgis.PyQt.QtGui import QIcon, QColor
-from qgis.PyQt.QtWidgets import QAction, QFileDialog
-from qgis.core import QgsStyle, QgsColorRamp, QgsColorRampShader #for a color ramp
-from qgis.core import QgsLayerTreeLayer, QgsLayerTreeGroup #to load all layers, also those in groups
-from qgis.core import QgsWkbTypes, QgsFillSymbol, QgsSimpleLineSymbolLayer # to set the polygon line to zero
-from qgis.core import QgsSymbolLevelItem # to set the symbol levels in isochrone layers
-from datetime import time, date, datetime # Don't delete! I use this for objects form request
-
-# personal imports
-from console import console
+# class imports
 from .stop import Stop
 from .station import Station
 from .route import Route
 from .referencePoint import ReferencePoint
+# python packages
 import requests, json
 import geopandas as gpd
 import pandas as pd
+from datetime import time, date, datetime
+import sys
+import os
 
-# This is needed to create own graduated symbol renderer
-from qgis.PyQt import QtGui
-
+sys.path.append('C:\\OSGeo4W64\\apps\\qgis\\python')
+sys.path.append('C:\\OSGeo4W64\\apps\\qgis\\python\\plugins')
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -61,66 +46,27 @@ from .resources import *
 from .transit_reachability_analyser_dialog import TransitReachabilityAnalyserDialog
 import os.path
 
+from qgis.gui import *
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
+# This is needed to create own graduated symbol renderer
+from qgis.PyQt import QtGui
+from qgis.PyQt.QtGui import QIcon, QColor
+from qgis.PyQt.QtWidgets import QAction, QFileDialog
 
-# downloaded for symbology, don't know which packages I really need: https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/vector.html#appearance-symbology-of-vector-layers
+from qgis.core import * #this would be enough, but then there are red marks in the code
+from qgis.core import QgsStyle, QgsColorRamp, QgsColorRampShader #for a color ramp
+from qgis.core import QgsLayerTreeLayer, QgsLayerTreeGroup #to load all layers, also those in groups
+from qgis.core import QgsWkbTypes, QgsFillSymbol, QgsSimpleLineSymbolLayer # to set the polygon line to zero
+# downloaded for symbology, https://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/vector.html#appearance-symbology-of-vector-layers
 from qgis.core import (
-
-  QgsApplication,
-
-  QgsDataSourceUri,
-
-  QgsCategorizedSymbolRenderer,
-
-  QgsClassificationRange,
-
-  QgsPointXY,
-
-  QgsProject,
-
-  QgsExpression,
-
-  QgsField,
-
-  QgsFields,
-
-  QgsFeature,
-
-  QgsFeatureRequest,
-
-  QgsFeatureRenderer,
-
-  QgsGeometry,
-
-  QgsGraduatedSymbolRenderer,
-
-  QgsMarkerSymbol,
-
-  QgsMessageLog,
-
-  QgsRectangle,
-
-  QgsRendererCategory,
-
-  QgsRendererRange,
-
-  QgsSymbol,
-
-  QgsVectorDataProvider,
-
-  QgsVectorLayer,
-
-  QgsVectorFileWriter,
-
-  QgsWkbTypes,
-
-  QgsSpatialIndex,
-
-  QgsVectorLayerUtils
-
-)
-
-
-
+   QgsApplication,
+   QgsProject,
+   QgsGraduatedSymbolRenderer,
+   QgsMarkerSymbol,
+   QgsRendererRange,
+   QgsSymbol,
+   QgsVectorLayer
+ )
 
 class TransitReachabilityAnalyser:
     """QGIS Plugin Implementation."""
@@ -402,9 +348,8 @@ class TransitReachabilityAnalyser:
         else:
             print("stops could not be queried because OTP is not reachable")
 
-
     def create_request_object(self):
-        layer_name = self.dlg.le_layer_name.text()  # TODO co ntrole, that the name is usable as filename
+        layer_name = self.dlg.le_layer_name.text()
         if self.dlg.le_filepath_itineraries.text() != "":
             filepath = self.dlg.le_filepath_itineraries.text()
         else:
@@ -424,7 +369,8 @@ class TransitReachabilityAnalyser:
 
 
         analysis_parameters = ReferencePoint(
-            #TODO make the try except statements not in the setter, but in this method
+            #TODO make the try except statements not in the setter of RererencePoint, but in this method
+            # TODO how to end the code, if except in try except
             lat=self.dlg.le_lat_of_start_end.text(),
             lon=self.dlg.le_lon_of_start_end.text(),
             day=self.dlg.le_date.text(),
@@ -470,8 +416,6 @@ class TransitReachabilityAnalyser:
         max_walking_time_collection = [None]
         catchment_area_collection = [None]
         first_possible_stops_collection = [None]
-        quality_category_collection = [None]
-
 
 
         first_stop_data = ""
@@ -485,8 +429,6 @@ class TransitReachabilityAnalyser:
             data = start_stop + ", "
             first_stop_data = first_stop_data + data
         first_possible_stops_collection[0] = first_stop_data
-        quality_category_collection[0] = analysis_parameters.get_letter_of_quality_category()
-
 
 
         for station in station_collection:
@@ -541,25 +483,20 @@ class TransitReachabilityAnalyser:
             walk_speed_collection.append(round(analysis_parameters.walk_speed*3.6, 1))
             max_walking_time_collection.append(round(analysis_parameters.max_walking_time/60, 1))
             catchment_area_collection.append(round(analysis_parameters.catchment_area, 1))
-            quality_category_collection.append(None)
 
-
-        #TODO change order: first columns in ordner of symbology feature
-        # change 'trip time' to 'travel time'
-        # change 'car driving time' to 'travel time car', because it includes 5 min to provide car
         df = pd.DataFrame(
             {
-                "Name": name_collection,
+                "name": name_collection,
+                "travel_time[min]": trip_time_collection,
                 "travel_time_ratio": travel_time_ratio_collection,
-                "number_of_transfers": number_of_transfers_collection,
                 "itinerary_frequency_[min]": itinerary_frequency_collection,
-                "trip_time_[min]": trip_time_collection,
-                "car_driving_time_[min]": car_driving_time_collection,
-                "walk_distance_[m]": meters_to_first_stop_collection,
                 "walk_time_[min]": walktime_to_first_stop_collection,
-                "selected_itineraries": selected_itineraries_collection,
-                "possible_itineraries": possible_itineraries_collection,
+                "walk_distance_[m]": meters_to_first_stop_collection,
+                "number_of_transfers": number_of_transfers_collection,
+                "travel_time_car_[min]": car_driving_time_collection,
                 "max_distance_station_to_stop": max_distance_station_to_stop_collection,
+                "selected_itinerarie": selected_itineraries_collection,
+                "possible_itineraries": possible_itineraries_collection,
                 "date": date_collection,
                 "time_start": time_start_collection,
                 "time_end": time_end_collection,
@@ -567,8 +504,6 @@ class TransitReachabilityAnalyser:
                 "max_walking_time_in_min": max_walking_time_collection,
                 "catchment_area": catchment_area_collection,
                 "first_possible_stops": first_possible_stops_collection,
-                "quality_category": quality_category_collection #TODO delete
-
             }
         )
         return df
@@ -587,7 +522,6 @@ class TransitReachabilityAnalyser:
         max_walking_time_collection = [None]
         catchment_area_collection = [None]
         possible_start_stations_collection = [None]
-        quality_category_collection = [None]
 
 
         start_station_data = ""
@@ -601,7 +535,6 @@ class TransitReachabilityAnalyser:
             data = start_station + ", "
             start_station_data = start_station_data + data
         possible_start_stations_collection[0] = start_station_data
-        quality_category_collection[0] = analysis_parameters.get_letter_of_quality_category()
 
         for stop in stop_collection:
             departure_data = ""
@@ -622,7 +555,6 @@ class TransitReachabilityAnalyser:
             walk_speed_collection.append(analysis_parameters.walk_speed*3.6)
             max_walking_time_collection.append(analysis_parameters.max_walking_time/60)
             catchment_area_collection.append(analysis_parameters.catchment_area)
-            quality_category_collection.append(None)
 
         df = pd.DataFrame(
             {
@@ -699,10 +631,10 @@ class TransitReachabilityAnalyser:
             print('     query and create Itineraries for one station: {}'.format(datetime.now() - time_itineraries_one_station))
             time_filter_itineraries = datetime.now()
             station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
-            all_itineraries.extend(station.queried_itineraries) #TODO is this pass by value? thats importand!!
+            all_itineraries.extend(station.queried_itineraries)
             for itinerary in station.itineraries_with_permissible_catchment_area:
                 analysis_parameters.add_first_possible_stop(itinerary.first_stop)
-                #itinerary.frequency = itinerary.calculate_frequency(route_collection) #TODO if the method with nextLegs doesn't work enable again
+                #itinerary.frequency = itinerary.calculate_frequency(route_collection) #alternative frequency calculation
             station.filter_shortest_itinerary()
             print('     filter catchment area: {}'.format(datetime.now() - time_filter_itineraries))
         analysis_parameters.remove_empty_entries_in_first_possible_stops() # because of the declaration of stat_station, there can be empty strings in possible_start_station
@@ -710,8 +642,6 @@ class TransitReachabilityAnalyser:
         for station in station_collection:
             station.calculate_travel_time_ratio(analysis_parameters, "start", url=self.get_request_url())
         print('     traveltime ratio: {}'.format(datetime.now() - time_traveltime_ratio))
-
-
 
     def export_stops_as_geopackage(self, stop_collection, analysis_parameters:ReferencePoint):
         lat_collection = []
@@ -730,7 +660,7 @@ class TransitReachabilityAnalyser:
         gdf = gpd.GeoDataFrame(station_attributes,
                                geometry=gpd.points_from_xy(lon_collection, lat_collection), crs="EPSG:4326")
         gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
-        layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")  # TODO funktioniert das so?
+        layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")
         QgsProject.instance().addMapLayer(layer)
     def export_stations_as_geopackage(self, station_collection, analysis_parameters:ReferencePoint):
         mean_lat_collection = []
@@ -909,25 +839,10 @@ class TransitReachabilityAnalyser:
 
         layer.setRenderer(trip_time_renderer)
         layer.renderer().setUsingSymbolLevels(True)
-        # renderer.setSymbolLevels(True)
-
         layer.triggerRepaint()
 
-
-        # #set label for quality category
-        # code from here: https://www.geographyrealm.com/labeling-and-map-transparency-qgis-python-programming-cookbook/
-        # label = QgsPalLayerSettings()
-        # label.readFromLayer(layer)
-        # label.enabled = True
-        # label.fieldName = "quality_category"
-        # label.placement = QgsPalLayerSettings.AroundPoint
-        # label.setDataDefinedProperty(QgsPalLayerSettings.Size, True, True,"8")
-        # label.writeToLayer(layer)
-
-        #return range_list
-
     def symbology_travel_time(self, layer):
-        target_field = "trip_time_[min]"
+        target_field = "travel_time[min]"
         limits = [0, 5.001, 10.001, 15.001, 20.001, 30.001, 40.001, 50.001, 60.001, 75.001, 90.001, 1000]
         label_limits = [0, 5, 10, 15, 20, 30, 40, 50, 60, 75, 90, 1000]
         colour_gradient = self.get_colors("Turbo", 11)
@@ -1171,7 +1086,7 @@ class TransitReachabilityAnalyser:
             #self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
             self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
             self.dlg.pb_reload_layer_cb.clicked.connect(self.load_layers_in_combobox)
-            self.dlg.pb_calculate_walk_distance.clicked.connect(self.setText_distance_fields)
+            self.dlg.pb_calculate_walk_distance.clicked.connect(self.setText_distance_field)
 
 
 
