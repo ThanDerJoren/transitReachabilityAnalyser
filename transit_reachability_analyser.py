@@ -640,7 +640,7 @@ class TransitReachabilityAnalyser:
 
             return QgsSymbol.defaultSymbol(layer.geometryType())
 
-    def symbology_for_particular_points(self, layer, range_list:list, target_field):
+    def add_rendererRange_for_particular_points(self, layer, range_list:list):
         # not reachable stations
         label = "Station not reachable"
         lower_limit = -1
@@ -665,18 +665,9 @@ class TransitReachabilityAnalyser:
         range_list.insert(0,range)
 
         range_list.reverse()
+        return range_list
 
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.renderer().setUsingSymbolLevels(True)
-        layer.triggerRepaint()
-
-    def symbology_travel_time(self, layer):
-        target_field = "travel_time[min]"
+    def get_travel_time_rendererRange(self, layer):
         limits = [0, 5.001, 10.001, 15.001, 20.001, 30.001, 40.001, 50.001, 60.001, 75.001, 90.001, 1000]
         label_limits = [0, 5, 10, 15, 20, 30, 40, 50, 60, 75, 90, 1000]
         colour_gradient = self.get_colors("Turbo", 11)
@@ -694,10 +685,8 @@ class TransitReachabilityAnalyser:
             sector = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(sector)
 
-        self.symbology_for_particular_points(layer, range_list, target_field)
-
-    def symbology_travel_time_ratio(self, layer):
-        target_field = "travel_time_ratio"
+        return range_list
+    def get_travel_time_ratio_rendererRange(self, layer):
         limits = [0.0, 1.0, 1.5, 2.1, 2.8, 3.8, 100.0]
         colour_gradient = self.get_colors("Spectral", 6) #RdYlGn
         colour_gradient.reverse()
@@ -714,11 +703,10 @@ class TransitReachabilityAnalyser:
             symbol.setColor(QtGui.QColor(color))
             element = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(element)
+        return range_list
 
-        self.symbology_for_particular_points(layer, range_list, target_field)
 
-    def symbology_frequency(self, layer):
-        target_field = "itinerary_frequency_[min]"
+    def get_frequency_rendererRange(self, layer):
         limits = [0, 5.001, 10.001, 20.001, 40.001, 60.001, 120.001, 1441]  # 1440min = 1trip per day
         label_limits = [0,5,10,20,40,60,120,1441]
         colour_gradient = self.get_colors("Viridis", 7)#PuRd
@@ -737,10 +725,9 @@ class TransitReachabilityAnalyser:
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-        self.symbology_for_particular_points(layer, range_list, target_field)
+        return range_list
 
-    def symbology_walk_time(self, layer):
-        target_field = "walk_time_[min]"
+    def get_walk_time_rendererRange(self, layer):
         limits = [0, 5.001, 10.001, 15.001, 20.001, 120]
         label_limits = [0,5,10,15,20,120]
         colour_gradient = self.get_colors("Purples", 5)
@@ -758,11 +745,10 @@ class TransitReachabilityAnalyser:
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
+        return range_list
 
-        self.symbology_for_particular_points(layer, range_list, target_field)
 
-    def symbology_walk_distance(self, layer):
-        target_field = "walk_distance_[m]"
+    def get_walk_distance_rendererRange(self, layer):
         limits = [0, 100.001, 200.001, 300.001, 500.001, 750.001, 1000.001, 5000.001]  # 1440min = 1trip per day
         label_limits = [0, 100, 200, 300, 500, 750, 1000, 5000]
         colour_gradient = self.get_colors("Purples", 7)
@@ -780,10 +766,9 @@ class TransitReachabilityAnalyser:
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-        self.symbology_for_particular_points(layer, range_list, target_field)
+        return range_list
 
-    def symbology_transfer(self, layer):
-        target_field = "number_of_transfers"
+    def get_transfer_rendererRange(self, layer):
         limits = [0.0, 1.0, 2.0, 3.0, 100.0]
         colour_gradient = self.get_colors("Oranges", 4)
         colour_gradient.reverse()
@@ -800,7 +785,7 @@ class TransitReachabilityAnalyser:
             symbol.setColor(QtGui.QColor(color))
             range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
             range_list.append(range)
-        self.symbology_for_particular_points(layer, range_list, target_field)
+        return range_list
 
     """
     ChatGPT Code:
@@ -812,26 +797,25 @@ class TransitReachabilityAnalyser:
         return color.name()
 
     def get_colors(self, ramp_name, num_colors):
-        # Lade den QGIS Stil und hole die Turbo Color Ramp
+        # Load the QGIS style and get the Turbo Color Ramp
         style = QgsStyle.defaultStyle()
-        #ramp_name = "Turbo"
         color_ramp = style.colorRamp(ramp_name)
 
         if not color_ramp:
             print(f"Error: Color ramp '{ramp_name}' not found.")
             return
         else:
-            # Erstelle eine Liste, um die Hex-Codes zu speichern
+            # Create a list to store the hex codes
             hex_colors = []
 
             for i in range(num_colors):
-                # Bestimme die Position auf der Farbrampe (von 0 bis 1)
+                # Determine the position on the color ramp (from 0 to 1)
                 position = i / (num_colors - 1)
 
-                # Hole die Farbe an dieser Position
+                # Get the color at this position
                 color = color_ramp.color(position)
 
-                # Konvertiere die Farbe in einen Hex-Code und füge sie der Liste hinzu
+                # Convert the color to a hex code and add it to the list
                 hex_colors.append(self.get_hex_from_color(color))
             return hex_colors
 
@@ -1019,24 +1003,35 @@ class TransitReachabilityAnalyser:
         layer_index = self.dlg.cb_layer_symbology.currentIndex()
         layer = layer_collection[layer_index]
         symbology_theme = self.dlg.cb_symbology_theme.currentIndex()
-        if symbology_theme == 0: self.symbology_travel_time(layer)
-        elif symbology_theme == 1: self.symbology_travel_time_ratio(layer)
-        elif symbology_theme == 2: self.symbology_frequency(layer)
-        elif symbology_theme == 3: self.symbology_walk_time(layer)
-        elif symbology_theme == 4: self.symbology_walk_distance(layer)
-        elif symbology_theme == 5: self.symbology_transfer(layer)
+        if symbology_theme == 0:
+            target_field = "travel_time[min]"
+            range_list = self.get_travel_time_rendererRange(layer)
+        elif symbology_theme == 1:
+            target_field = "travel_time_ratio"
+            range_list = self.get_travel_time_ratio_rendererRange(layer)
+        elif symbology_theme == 2:
+            target_field = "itinerary_frequency_[min]"
+            range_list = self.get_frequency_rendererRange(layer)
+        elif symbology_theme == 3:
+            target_field = "walk_time_[min]"
+            range_list = self.get_walk_time_rendererRange(layer)
+        elif symbology_theme == 4:
+            target_field = "walk_distance_[m]"
+            range_list = self.get_walk_distance_rendererRange(layer)
+        elif symbology_theme == 5:
+            target_field = "number_of_transfers"
+            range_list = self.get_transfer_rendererRange(layer)
 
-        # if self.dlg.cb_symbology_theme.itemData(2) == "travel_time":
-        #     self.travel_time_symbology(layer)
-        # else:
-        #     print("hat nicht funktioniert")
+        range_list = self.add_rendererRange_for_particular_points(layer, range_list)
 
-        # if self.dlg.rb_travel_time_transit.isChecked():
-        #     self.travel_time_symbology(layer)
-        # elif self.dlg.rb_travel_time_ratio_transit_to_car.isChecked():
-        #     self.travel_time_ratio_symbology(layer)
-        #self.develop_labeling()
+        layer_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        layer_renderer.setClassificationMethod(classification_method)
+        layer_renderer.setClassAttribute(target_field)
 
+        layer.setRenderer(layer_renderer)
+        layer.renderer().setUsingSymbolLevels(True)
+        layer.triggerRepaint()
 
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
