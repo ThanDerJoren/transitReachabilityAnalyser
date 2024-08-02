@@ -218,34 +218,15 @@ class TransitReachabilityAnalyser:
     """
     My own methods
     """
-
-    def check_grizzly_server_is_running(self):
+    """
+    Reachability Analysis Methods
+    """
+    def get_request_url(self):
         if self.dlg.rb_otp_manually_started_8080.isChecked():
-            url = "http://localhost:8080/"
-            print(url)
+            return "http://localhost:8080/otp/gtfs/v1"
         elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
-            if self.dlg.le_port_number.text() != "":
-                port_number = self.dlg.le_port_number.text()
-                url = f"http://localhost:{port_number}/"
-                print(f"request url: {url}")
-            else:
-                self.iface.messageBar().pushMessage("You have to enter a port number for OTP")
-        else:
-            self.iface.messageBar().pushMessage("How to start OTP. There has to be at least one option choosen")
-        try:
-            # Get Url
-            get = requests.get(url)
-            # if the request succeeds
-            if get.status_code == 200:
-                self.dlg.l_otp_connection_test.setText("connection to OTP server")
-                return True
-            else:
-                return False
-            # Exception
-        except requests.exceptions.RequestException as e:
-            self.dlg.l_otp_connection_test.setText("no connection to OTP server")
-            self.iface.messageBar().pushMessage("Grizzly server/ OpenTripPlanner is not running or runs on an different port")
-            return False
+            port_number = self.dlg.le_port_number.text()
+            return f"http://localhost:{port_number}/otp/gtfs/v1"
 
     def get_walk_speed(self):
         if self.dlg.rb_2kmh.isChecked():
@@ -290,28 +271,6 @@ class TransitReachabilityAnalyser:
             self.iface.messageBar().pushMessage("One walk distance option has to be chosen")
             return False
         return max_walking_time
-
-    def setText_distance_fields(self):
-        if not self.get_walk_speed():
-            return
-        else:
-            walk_speed = self.get_walk_speed()
-        if not self.get_max_walk_time():
-            return
-        else:
-            walk_time = self.get_max_walk_time()
-
-        walk_distance = walk_speed * walk_time
-        self.dlg.le_personalized_tempo.setText(f"{round(walk_speed * 3.6, 1)}")
-        self.dlg.le_max_walking_time.setText(f"{round(walk_time / 60)}")
-        self.dlg.le_max_walk_distance.setText(f"{round(walk_distance)}")
-
-    def get_request_url(self): #TODO add this to the right functions which need the url
-        if self.dlg.rb_otp_manually_started_8080.isChecked():
-            return "http://localhost:8080/otp/gtfs/v1"
-        elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
-            port_number = self.dlg.le_port_number.text()
-            return f"http://localhost:{port_number}/otp/gtfs/v1"
 
     def query_all_stops_incl_departure_times(self, analysis_parameters:ReferencePoint):
         unix_timestamp = int(datetime.timestamp(datetime.combine(analysis_parameters.day, analysis_parameters.time_start)))
@@ -385,6 +344,76 @@ class TransitReachabilityAnalyser:
             self.iface.messageBar().pushMessage(analysis_parameters.error_message)
             return
         return analysis_parameters
+
+    def create_stop_and_route_objects(self, queried_stops, analysis_parameters):
+        stop_objects = []
+        all_routes = []
+        for stop in queried_stops:
+            route_objects = []
+            # first I have to create an object of all possible routes
+            # then I can add the departure times to the corresponding routes
+            for stop_times in stop["stoptimesWithoutPatterns"]:
+                route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
+                route_shortName = stop_times["trip"]["route"]["shortName"]
+                #check if the routnumber already exists
+                route_already_created = False
+                for route in route_objects:
+                    if route.gtfs_id == route_gtfsId:
+                        route_already_created = True
+                if not(route_already_created):
+                    obj = Route(route_gtfsId, route_shortName, stop["gtfsId"])
+                    route_objects.append(obj)
+            for stop_times in stop["stoptimesWithoutPatterns"]:
+                route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
+                seconds_since_midnight = stop_times["scheduledDeparture"]
+                m, s = divmod(seconds_since_midnight, 60)
+                h, m = divmod(m, 60)
+                departure_time = time(hour=h, minute=m, second=s)
+                for route in route_objects:
+                    if route.gtfs_id == route_gtfsId:
+                        route.add_departure_time(departure_time)
+                        route.frequency = route.calculate_frequency(analysis_parameters)
+                        all_routes.append(route)
+            new_stop = Stop(stop["name"], stop["gtfsId"], stop["lat"], stop["lon"], stop["vehicleMode"], route_objects)
+            stop_objects.append(new_stop)
+        print(f"length of all_routes list: {len(all_routes)}")
+        return stop_objects, all_routes
+
+    def create_stations(self, stop_collection):
+        station_collection = []
+        current_stop_name = stop_collection[0].name
+        related_stops = [stop_collection[0]]
+        for element in stop_collection[1:]:
+            if element.name == current_stop_name:
+                related_stops.append(element)
+            else:
+                station = Station(current_stop_name, related_stops.copy())
+                station.calculate_max_distance_station_to_stop(self.get_request_url())
+                station_collection.append(station)
+                current_stop_name = element.name
+                related_stops.clear()
+                related_stops.append(element)
+        return station_collection
+
+    def create_itineraries_from_start_to_each_station(self, station_collection, analysis_parameters: ReferencePoint, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
+        all_itineraries = []
+        for item_index, station in enumerate(station_collection):
+            time_itineraries_one_station = datetime.now()
+            station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection, url=self.get_request_url())
+            print('     query and create Itineraries for one station: {}'.format(datetime.now() - time_itineraries_one_station))
+            time_filter_itineraries = datetime.now()
+            station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
+            all_itineraries.extend(station.queried_itineraries)
+            for itinerary in station.itineraries_with_permissible_catchment_area:
+                analysis_parameters.add_first_possible_stop(itinerary.first_stop)
+                #itinerary.frequency = itinerary.calculate_frequency(route_collection) #alternative frequency calculation
+            station.filter_shortest_itinerary()
+            print('     filter catchment area: {}'.format(datetime.now() - time_filter_itineraries))
+        analysis_parameters.remove_empty_entries_in_first_possible_stops() # because of the declaration of stat_station, there can be empty strings in possible_start_station
+        time_traveltime_ratio = datetime.now()
+        for station in station_collection:
+            station.calculate_travel_time_ratio(analysis_parameters, "start", url=self.get_request_url())
+        print('     traveltime ratio: {}'.format(datetime.now() - time_traveltime_ratio))
 
     def create_dataframe_with_station_attributes(self, station_collection, analysis_parameters:ReferencePoint):
         """
@@ -572,77 +601,6 @@ class TransitReachabilityAnalyser:
         )
         return df
 
-
-    def create_stop_and_route_objects(self, queried_stops, analysis_parameters):
-        stop_objects = []
-        all_routes = []
-        for stop in queried_stops:
-            route_objects = []
-            # first I have to create an object of all possible routes
-            # then I can add the departure times to the corresponding routes
-            for stop_times in stop["stoptimesWithoutPatterns"]:
-                route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
-                route_shortName = stop_times["trip"]["route"]["shortName"]
-                #check if the routnumber already exists
-                route_already_created = False
-                for route in route_objects:
-                    if route.gtfs_id == route_gtfsId:
-                        route_already_created = True
-                if not(route_already_created):
-                    obj = Route(route_gtfsId, route_shortName, stop["gtfsId"])
-                    route_objects.append(obj)
-            for stop_times in stop["stoptimesWithoutPatterns"]:
-                route_gtfsId = stop_times["trip"]["route"]["gtfsId"]
-                seconds_since_midnight = stop_times["scheduledDeparture"]
-                m, s = divmod(seconds_since_midnight, 60)
-                h, m = divmod(m, 60)
-                departure_time = time(hour=h, minute=m, second=s)
-                for route in route_objects:
-                    if route.gtfs_id == route_gtfsId:
-                        route.add_departure_time(departure_time)
-                        route.frequency = route.calculate_frequency(analysis_parameters)
-                        all_routes.append(route)
-            new_stop = Stop(stop["name"], stop["gtfsId"], stop["lat"], stop["lon"], stop["vehicleMode"], route_objects)
-            stop_objects.append(new_stop)
-        print(f"length of all_routes list: {len(all_routes)}")
-        return stop_objects, all_routes
-
-    def create_stations(self, stop_collection):
-        station_collection = []
-        current_stop_name = stop_collection[0].name
-        related_stops = [stop_collection[0]]
-        for element in stop_collection[1:]:
-            if element.name == current_stop_name:
-                related_stops.append(element)
-            else:
-                station = Station(current_stop_name, related_stops.copy())
-                station.calculate_max_distance_station_to_stop(self.get_request_url())
-                station_collection.append(station)
-                current_stop_name = element.name
-                related_stops.clear()
-                related_stops.append(element)
-        return station_collection
-
-    def create_itineraries_from_start_to_each_station(self, station_collection, analysis_parameters: ReferencePoint, route_collection): #date: str, time: str, search_window: int, catchment_area, start: dict):
-        all_itineraries = []
-        for item_index, station in enumerate(station_collection):
-            time_itineraries_one_station = datetime.now()
-            station.query_and_create_transit_itineraries(analysis_parameters, "start", route_collection, url=self.get_request_url())
-            print('     query and create Itineraries for one station: {}'.format(datetime.now() - time_itineraries_one_station))
-            time_filter_itineraries = datetime.now()
-            station.filter_itineraries_with_permissible_catchment_area("start", analysis_parameters.catchment_area)
-            all_itineraries.extend(station.queried_itineraries)
-            for itinerary in station.itineraries_with_permissible_catchment_area:
-                analysis_parameters.add_first_possible_stop(itinerary.first_stop)
-                #itinerary.frequency = itinerary.calculate_frequency(route_collection) #alternative frequency calculation
-            station.filter_shortest_itinerary()
-            print('     filter catchment area: {}'.format(datetime.now() - time_filter_itineraries))
-        analysis_parameters.remove_empty_entries_in_first_possible_stops() # because of the declaration of stat_station, there can be empty strings in possible_start_station
-        time_traveltime_ratio = datetime.now()
-        for station in station_collection:
-            station.calculate_travel_time_ratio(analysis_parameters, "start", url=self.get_request_url())
-        print('     traveltime ratio: {}'.format(datetime.now() - time_traveltime_ratio))
-
     def export_stops_as_geopackage(self, stop_collection, analysis_parameters:ReferencePoint):
         lat_collection = []
         lon_collection = []
@@ -662,6 +620,7 @@ class TransitReachabilityAnalyser:
         gdf.to_file(analysis_parameters.filepath, driver='GPKG', layer=analysis_parameters.layer_name)
         layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")
         QgsProject.instance().addMapLayer(layer)
+
     def export_stations_as_geopackage(self, station_collection, analysis_parameters:ReferencePoint):
         mean_lat_collection = []
         mean_lon_collection = []
@@ -683,6 +642,328 @@ class TransitReachabilityAnalyser:
         layer = QgsVectorLayer(analysis_parameters.filepath, analysis_parameters.layer_name, "ogr")
 
         QgsProject.instance().addMapLayer(layer)
+
+    """
+    Symbology Methods
+    """
+    def set_symbol_point_or_polygon(self, layer):
+        if layer.geometryType() == QgsWkbTypes.PolygonGeometry:
+            symbol = QgsFillSymbol.createSimple({'color': '#9b9b9b', 'outline_style': 'no'})
+            print(type(symbol))
+            return symbol
+        elif QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            print(type(symbol))
+            return symbol
+        else:
+
+            return QgsSymbol.defaultSymbol(layer.geometryType())
+
+    def symbology_for_particular_points(self, layer, range_list:list, target_field):
+        # not reachable stations
+        label = "Station not reachable"
+        lower_limit = -1
+        upper_limit = -1
+        symbol = self.set_symbol_point_or_polygon(layer)
+        grey = "#9b9b9b"
+        symbol.setColor(QtGui.QColor(grey))
+        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+        range_list.append(range)
+
+        # start/end point
+        label = "Start"
+        lower_limit = -2
+        upper_limit = -2
+        if QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
+            symbol = QgsMarkerSymbol.createSimple({'name': 'square', "size": 4})
+        else:
+            symbol = self.set_symbol_point_or_polygon(layer)
+        pink = "#fe019a"
+        symbol.setColor(QtGui.QColor(pink))
+        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+        range_list.insert(0,range)
+
+        range_list.reverse()
+
+        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
+        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
+        trip_time_renderer.setClassificationMethod(classification_method)
+        trip_time_renderer.setClassAttribute(target_field)
+
+        layer.setRenderer(trip_time_renderer)
+        layer.renderer().setUsingSymbolLevels(True)
+        layer.triggerRepaint()
+
+    def symbology_travel_time(self, layer):
+        target_field = "travel_time[min]"
+        limits = [0, 5.001, 10.001, 15.001, 20.001, 30.001, 40.001, 50.001, 60.001, 75.001, 90.001, 1000]
+        label_limits = [0, 5, 10, 15, 20, 30, 40, 50, 60, 75, 90, 1000]
+        colour_gradient = self.get_colors("Turbo", 11)
+
+        range_list = []
+        for index, color in enumerate(colour_gradient):
+            if index == 10:
+                label = ">90 min"
+            else:
+                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min"
+            lower_limit = limits[index]
+            upper_limit = limits[index + 1]
+            symbol = self.set_symbol_point_or_polygon(layer)#QgsSymbol.defaultSymbol(layer.geometryType())
+            symbol.setColor(QtGui.QColor(color))
+            sector = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(sector)
+
+        self.symbology_for_particular_points(layer, range_list, target_field)
+
+    def symbology_travel_time_ratio(self, layer):
+        target_field = "travel_time_ratio"
+        limits = [0.0, 1.0, 1.5, 2.1, 2.8, 3.8, 100.0]
+        colour_gradient = self.get_colors("Spectral", 6) #RdYlGn
+        colour_gradient.reverse()
+
+        range_list = []
+        for index, color in enumerate(colour_gradient):
+            if index == 5:
+                label = "≥3.8"
+            else:
+                label = f"{limits[index]}≤ to <{limits[index+1]}"
+            lower_limit = limits[index]
+            upper_limit = limits[index+1]
+            symbol = self.set_symbol_point_or_polygon(layer)
+            symbol.setColor(QtGui.QColor(color))
+            element = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(element)
+
+        self.symbology_for_particular_points(layer, range_list, target_field)
+
+    def symbology_frequency(self, layer):
+        target_field = "itinerary_frequency_[min]"
+        limits = [0, 5.001, 10.001, 20.001, 40.001, 60.001, 120.001, 1441]  # 1440min = 1trip per day
+        label_limits = [0,5,10,20,40,60,120,1441]
+        colour_gradient = self.get_colors("Viridis", 7)#PuRd
+        colour_gradient.reverse()
+        #limits = [0, 5, 8, 10, 15, 20, 30, 40, 60, 120, 1440]
+
+        range_list = []
+        for index, color in enumerate(colour_gradient):
+            if index == 6:
+                label = ">120 min"
+            else:
+                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min frequency" # f"{limits[index+1]} min frequency"
+            lower_limit = limits[index]
+            upper_limit = limits[index + 1]
+            symbol = self.set_symbol_point_or_polygon(layer)
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+        self.symbology_for_particular_points(layer, range_list, target_field)
+
+    def symbology_walk_time(self, layer):
+        target_field = "walk_time_[min]"
+        limits = [0, 5.001, 10.001, 15.001, 20.001, 120]
+        label_limits = [0,5,10,15,20,120]
+        colour_gradient = self.get_colors("Purples", 5)
+        colour_gradient.reverse()
+
+        range_list = []
+        for index, color in enumerate(colour_gradient):
+            if index == 4:
+                label = ">21 min walktime"
+            else:
+                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min walktime"
+            lower_limit = limits[index]
+            upper_limit = limits[index+1]
+            symbol = self.set_symbol_point_or_polygon(layer)
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+
+        self.symbology_for_particular_points(layer, range_list, target_field)
+
+    def symbology_walk_distance(self, layer):
+        target_field = "walk_distance_[m]"
+        limits = [0, 100.001, 200.001, 300.001, 500.001, 750.001, 1000.001, 5000.001]  # 1440min = 1trip per day
+        label_limits = [0, 100, 200, 300, 500, 750, 1000, 5000]
+        colour_gradient = self.get_colors("Purples", 7)
+        colour_gradient.reverse()
+
+        range_list = []
+        for index, color in enumerate(colour_gradient):
+            if index == 6:
+                label = ">1000 m walkdistance"
+            else:
+                label = f"{label_limits[index]}< to ≤{label_limits[index + 1]} m walkdistance"  # f"{limits[index+1]} min frequency"
+            lower_limit = limits[index]  # inclusive
+            upper_limit = limits[index + 1]  # exclusive
+            symbol = self.set_symbol_point_or_polygon(layer)
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+        self.symbology_for_particular_points(layer, range_list, target_field)
+
+    def symbology_transfer(self, layer):
+        target_field = "number_of_transfers"
+        limits = [0.0, 1.0, 2.0, 3.0, 100.0]
+        colour_gradient = self.get_colors("Oranges", 4)
+        colour_gradient.reverse()
+
+        range_list = []
+        for index, color in enumerate(colour_gradient):
+            if index == 3:
+                label = "≥3"
+            else:
+                label = f"{index} transfers"
+            lower_limit = limits[index] #inclusive
+            upper_limit = limits[index + 1] #exclusive
+            symbol = self.set_symbol_point_or_polygon(layer)
+            symbol.setColor(QtGui.QColor(color))
+            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
+            range_list.append(range)
+        self.symbology_for_particular_points(layer, range_list, target_field)
+
+    """
+    ChatGPT Code:
+    Request: In der QGIS Python API gibt es die Klasse QgsColorRamp. Ich möchte die ColorRamp Turbo von Qgis erstellen und auf die Hexcodes dieser ColorRamp zugreifen
+    """
+
+    def get_hex_from_color(self, color: QColor) -> str:
+        """Convert a QColor to a hex string."""
+        return color.name()
+
+    def get_colors(self, ramp_name, num_colors):
+        # Lade den QGIS Stil und hole die Turbo Color Ramp
+        style = QgsStyle.defaultStyle()
+        #ramp_name = "Turbo"
+        color_ramp = style.colorRamp(ramp_name)
+
+        if not color_ramp:
+            print(f"Error: Color ramp '{ramp_name}' not found.")
+            return
+        else:
+            # Erstelle eine Liste, um die Hex-Codes zu speichern
+            hex_colors = []
+
+            for i in range(num_colors):
+                # Bestimme die Position auf der Farbrampe (von 0 bis 1)
+                position = i / (num_colors - 1)
+
+                # Hole die Farbe an dieser Position
+                color = color_ramp.color(position)
+
+                # Konvertiere die Farbe in einen Hex-Code und füge sie der Liste hinzu
+                hex_colors.append(self.get_hex_from_color(color))
+            return hex_colors
+
+    """Request: Ich greife mit folgendem code auf die QGis Layer zu. Leider werden layer, die in Gruppen liegen nicht angezigt. Wie sieht der Code aus, damit auch layer in Gruppen gefunden werden:
+    Request2: im folgenden code werden alle Layer in eine Combobox geladen. Ich möchte jetzt nur point layer in eine Combobox laden. Was muss ich ändern? Kommentare im Code bitte auf Englisch:"""
+
+    def get_layers(self, root, layer_type="all"):
+        layers = []
+        nodes = root.children()
+
+        for node in nodes:
+            if isinstance(node, QgsLayerTreeLayer):
+                layer = node.layer()
+                # Check if the layer is a vector layer before filtering for geometry type
+                if isinstance(layer, QgsVectorLayer):
+                    # Filter layers based on the specified layer_type
+                    if layer_type == "all" or \
+                            (layer_type == "points" and layer.geometryType() == QgsWkbTypes.PointGeometry) or \
+                            (layer_type == "polygons" and layer.geometryType() == QgsWkbTypes.PolygonGeometry):
+                        layers.append(layer)
+            elif isinstance(node, QgsLayerTreeGroup):
+                # If the node is a group, recursively get layers from the group
+                layers.extend(self.get_layers(node, layer_type))
+
+        return layers
+
+    def load_layers_in_combobox(self):
+        # Fetch the currently loaded layers including those in groups
+        root = QgsProject.instance().layerTreeRoot()
+        all_layers = self.get_layers(root, "all")
+        # Clear the contents of the comboBox from previous runs
+        self.dlg.cb_layer_symbology.clear()
+        # Populate the comboBox with names of the specified type of layers
+        self.dlg.cb_layer_symbology.addItems([layer.name() for layer in all_layers])
+
+    """
+    Request: temporary layer"""
+    def determine_qvariant_type(self, dtype):
+        if pd.api.types.is_integer_dtype(dtype):
+            return QVariant.Int
+        elif pd.api.types.is_float_dtype(dtype):
+            return QVariant.Double
+        elif pd.api.types.is_object_dtype(dtype):
+            return QVariant.String
+        elif pd.api.types.is_bool_dtype(dtype):
+            return QVariant.Bool
+        elif pd.api.types.is_datetime64_any_dtype(dtype):
+            return QVariant.DateTime
+        elif pd.api.types.is_timedelta64_dtype(dtype):
+            return QVariant.Time
+        else:
+            return QVariant.String
+    """   
+    end of ChatGPT code
+    """
+
+    def setText_distance_field(self):
+        if not self.get_walk_speed():
+            return
+        else:
+            walk_speed = self.get_walk_speed()
+        if not self.get_max_walk_time():
+            return
+        else:
+            walk_time = self.get_max_walk_time()
+
+        walk_distance = walk_speed * walk_time
+        self.dlg.le_personalized_tempo.setText(f"{round(walk_speed * 3.6, 1)}")
+        self.dlg.le_max_walking_time.setText(f"{round(walk_time / 60)}")
+        self.dlg.le_max_walk_distance.setText(f"{round(walk_distance)}")
+
+    def check_grizzly_server_is_running(self):
+        if self.dlg.rb_otp_manually_started_8080.isChecked():
+            url = "http://localhost:8080/"
+            print(url)
+        elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
+            if self.dlg.le_port_number.text() != "":
+                port_number = self.dlg.le_port_number.text()
+                url = f"http://localhost:{port_number}/"
+                print(f"request url: {url}")
+            else:
+                self.iface.messageBar().pushMessage("You have to enter a port number for OTP")
+        else:
+            self.iface.messageBar().pushMessage("How to start OTP. There has to be at least one option choosen")
+        try:
+            # Get Url
+            get = requests.get(url)
+            # if the request succeeds
+            if get.status_code == 200:
+                self.dlg.l_otp_connection_test.setText("connection to OTP server")
+                return True
+            else:
+                return False
+            # Exception
+        except requests.exceptions.RequestException as e:
+            self.dlg.l_otp_connection_test.setText("no connection to OTP server")
+            self.iface.messageBar().pushMessage("Grizzly server/ OpenTripPlanner is not running or runs on an different port")
+            return False
+
+    def select_output_file(self, current_line_edit): #
+        # Get the directory of the currently opened QGIS project
+        project_path = QgsProject.instance().fileName()
+        if project_path:
+            default_dir = os.path.dirname(project_path)
+        else:
+            default_dir = os.path.expanduser("~")  # Fallback to home directory if no project is open
+
+        filename, _filter = QFileDialog.getSaveFileName(
+            self.dlg, "Filepath ", "", '*.gpkg')
+        if current_line_edit == "itineraries":
+            self.dlg.le_filepath_itineraries.setText(filename)
+            layer_name = os.path.splitext(os.path.basename(filename))[0]
+            self.dlg.le_layer_name.setText(layer_name)
 
     def stops_with_departure_times_from_otp_to_gpkg(self):
         print("master Branch")
@@ -753,35 +1034,6 @@ class TransitReachabilityAnalyser:
         else:
             return
 
-    def select_output_file(self, current_line_edit): #
-        # Get the directory of the currently opened QGIS project
-        project_path = QgsProject.instance().fileName()
-        if project_path:
-            default_dir = os.path.dirname(project_path)
-        else:
-            default_dir = os.path.expanduser("~")  # Fallback to home directory if no project is open
-
-        filename, _filter = QFileDialog.getSaveFileName(
-            self.dlg, "Filepath ", "", '*.gpkg')
-        if current_line_edit == "itineraries":
-            self.dlg.le_filepath_itineraries.setText(filename)
-            layer_name = os.path.splitext(os.path.basename(filename))[0]
-            self.dlg.le_layer_name.setText(layer_name)
-
-    def set_symbol_point_or_polygon(self, layer):
-        if layer.geometryType() == QgsWkbTypes.PolygonGeometry:
-            symbol = QgsFillSymbol.createSimple({'color': '#9b9b9b', 'outline_style': 'no'})
-            print(type(symbol))
-            return symbol
-        elif QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
-            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-            print(type(symbol))
-            return symbol
-        else:
-
-            return QgsSymbol.defaultSymbol(layer.geometryType())
-        
-
     def set_default_symbology(self):
         root = QgsProject.instance().layerTreeRoot()
         layer_collection = self.get_layers(root, "all")
@@ -806,267 +1058,9 @@ class TransitReachabilityAnalyser:
         #     self.travel_time_ratio_symbology(layer)
         #self.develop_labeling()
 
-    def symbology_for_particular_points(self, layer, range_list:list, target_field):
-        # not reachable stations
-        label = "Station not reachable"
-        lower_limit = -1
-        upper_limit = -1
-        symbol = self.set_symbol_point_or_polygon(layer)
-        grey = "#9b9b9b"
-        symbol.setColor(QtGui.QColor(grey))
-        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-        range_list.append(range)
-
-        # start/end point
-        label = "Start"
-        lower_limit = -2
-        upper_limit = -2
-        if QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
-            symbol = QgsMarkerSymbol.createSimple({'name': 'square', "size": 4})
-        else:
-            symbol = self.set_symbol_point_or_polygon(layer)
-        pink = "#fe019a"
-        symbol.setColor(QtGui.QColor(pink))
-        range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-        range_list.insert(0,range)
-
-        range_list.reverse()
-
-        trip_time_renderer = QgsGraduatedSymbolRenderer(target_field, range_list)
-        classification_method = QgsApplication.classificationMethodRegistry().method("EqualInterval")
-        trip_time_renderer.setClassificationMethod(classification_method)
-        trip_time_renderer.setClassAttribute(target_field)
-
-        layer.setRenderer(trip_time_renderer)
-        layer.renderer().setUsingSymbolLevels(True)
-        layer.triggerRepaint()
-
-    def symbology_travel_time(self, layer):
-        target_field = "travel_time[min]"
-        limits = [0, 5.001, 10.001, 15.001, 20.001, 30.001, 40.001, 50.001, 60.001, 75.001, 90.001, 1000]
-        label_limits = [0, 5, 10, 15, 20, 30, 40, 50, 60, 75, 90, 1000]
-        colour_gradient = self.get_colors("Turbo", 11)
-
-        range_list = []
-        for index, color in enumerate(colour_gradient):
-            if index == 10:
-                label = ">90 min"
-            else:
-                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min"
-            lower_limit = limits[index]
-            upper_limit = limits[index + 1]
-            symbol = self.set_symbol_point_or_polygon(layer)#QgsSymbol.defaultSymbol(layer.geometryType())
-            symbol.setColor(QtGui.QColor(color))
-            sector = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(sector)
-
-        self.symbology_for_particular_points(layer, range_list, target_field)
-    def symbology_travel_time_ratio(self, layer):
-        target_field = "travel_time_ratio"
-        limits = [0.0, 1.0, 1.5, 2.1, 2.8, 3.8, 100.0]
-        colour_gradient = self.get_colors("Spectral", 6) #RdYlGn
-        colour_gradient.reverse()
-
-        range_list = []
-        for index, color in enumerate(colour_gradient):
-            if index == 5:
-                label = "≥3.8"
-            else:
-                label = f"{limits[index]}≤ to <{limits[index+1]}"
-            lower_limit = limits[index]
-            upper_limit = limits[index+1]
-            symbol = self.set_symbol_point_or_polygon(layer)
-            symbol.setColor(QtGui.QColor(color))
-            element = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(element)
-
-        self.symbology_for_particular_points(layer, range_list, target_field)
-
-
-    def symbology_frequency(self, layer):
-        target_field = "itinerary_frequency_[min]"
-        limits = [0, 5.001, 10.001, 20.001, 40.001, 60.001, 120.001, 1441]  # 1440min = 1trip per day
-        label_limits = [0,5,10,20,40,60,120,1441]
-        colour_gradient = self.get_colors("Viridis", 7)#PuRd
-        colour_gradient.reverse()
-        #limits = [0, 5, 8, 10, 15, 20, 30, 40, 60, 120, 1440]
-
-        range_list = []
-        for index, color in enumerate(colour_gradient):
-            if index == 6:
-                label = ">120 min"
-            else:
-                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min frequency" # f"{limits[index+1]} min frequency"
-            lower_limit = limits[index]
-            upper_limit = limits[index + 1]
-            symbol = self.set_symbol_point_or_polygon(layer)
-            symbol.setColor(QtGui.QColor(color))
-            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(range)
-        self.symbology_for_particular_points(layer, range_list, target_field)
-
-
-    def symbology_walk_time(self, layer):
-        target_field = "walk_time_[min]"
-        limits = [0, 5.001, 10.001, 15.001, 20.001, 120]
-        label_limits = [0,5,10,15,20,120]
-        colour_gradient = self.get_colors("Purples", 5)
-        colour_gradient.reverse()
-
-        range_list = []
-        for index, color in enumerate(colour_gradient):
-            if index == 4:
-                label = ">21 min walktime"
-            else:
-                label = f"{label_limits[index]}< to ≤{label_limits[index+1]} min walktime"
-            lower_limit = limits[index]
-            upper_limit = limits[index+1]
-            symbol = self.set_symbol_point_or_polygon(layer)
-            symbol.setColor(QtGui.QColor(color))
-            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(range)
-
-        self.symbology_for_particular_points(layer, range_list, target_field)
-
-
-    def symbology_walk_distance(self, layer):
-        target_field = "walk_distance_[m]"
-        limits = [0, 100.001, 200.001, 300.001, 500.001, 750.001, 1000.001, 5000.001]  # 1440min = 1trip per day
-        label_limits = [0, 100, 200, 300, 500, 750, 1000, 5000]
-        colour_gradient = self.get_colors("Purples", 7)
-        colour_gradient.reverse()
-
-        range_list = []
-        for index, color in enumerate(colour_gradient):
-            if index == 6:
-                label = ">1000 m walkdistance"
-            else:
-                label = f"{label_limits[index]}< to ≤{label_limits[index + 1]} m walkdistance"  # f"{limits[index+1]} min frequency"
-            lower_limit = limits[index]  # inclusive
-            upper_limit = limits[index + 1]  # exclusive
-            symbol = self.set_symbol_point_or_polygon(layer)
-            symbol.setColor(QtGui.QColor(color))
-            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(range)
-        self.symbology_for_particular_points(layer, range_list, target_field)
-
-
-    def symbology_transfer(self, layer):
-        target_field = "number_of_transfers"
-        limits = [0.0, 1.0, 2.0, 3.0, 100.0]
-        colour_gradient = self.get_colors("Oranges", 4)
-        colour_gradient.reverse()
-
-        range_list = []
-        for index, color in enumerate(colour_gradient):
-            if index == 3:
-                label = "≥3"
-            else:
-                label = f"{index} transfers"
-            lower_limit = limits[index] #inclusive
-            upper_limit = limits[index + 1] #exclusive
-            symbol = self.set_symbol_point_or_polygon(layer)
-            symbol.setColor(QtGui.QColor(color))
-            range = QgsRendererRange(lower_limit, upper_limit, symbol, label)
-            range_list.append(range)
-        self.symbology_for_particular_points(layer, range_list, target_field)
-
-
-    """
-    ChatGPT Code:
-    Request: In der QGIS Python API gibt es die Klasse QgsColorRamp. Ich möchte die ColorRamp Turbo von Qgis erstellen und auf die Hexcodes dieser ColorRamp zugreifen
-    """
-
-    def get_hex_from_color(self, color: QColor) -> str:
-        """Convert a QColor to a hex string."""
-        return color.name()
-
-    def get_colors(self, ramp_name, num_colors):
-        # Lade den QGIS Stil und hole die Turbo Color Ramp
-        style = QgsStyle.defaultStyle()
-        #ramp_name = "Turbo"
-        color_ramp = style.colorRamp(ramp_name)
-
-        if not color_ramp:
-            print(f"Error: Color ramp '{ramp_name}' not found.")
-            return
-        else:
-            # Erstelle eine Liste, um die Hex-Codes zu speichern
-            hex_colors = []
-
-            for i in range(num_colors):
-                # Bestimme die Position auf der Farbrampe (von 0 bis 1)
-                position = i / (num_colors - 1)
-
-                # Hole die Farbe an dieser Position
-                color = color_ramp.color(position)
-
-                # Konvertiere die Farbe in einen Hex-Code und füge sie der Liste hinzu
-                hex_colors.append(self.get_hex_from_color(color))
-            return hex_colors
-
-    """Request: Ich greife mit folgendem code auf die QGis Layer zu. Leider werden layer, die in Gruppen liegen nicht angezigt. Wie sieht der Code aus, damit auch layer in Gruppen gefunden werden:
-    Request2: im folgenden code werden alle Layer in eine Combobox geladen. Ich möchte jetzt nur point layer in eine Combobox laden. Was muss ich ändern? Kommentare im Code bitte auf Englisch:"""
-
-    def get_layers(self, root, layer_type="all"):
-        layers = []
-        nodes = root.children()
-
-        for node in nodes:
-            if isinstance(node, QgsLayerTreeLayer):
-                layer = node.layer()
-                # Check if the layer is a vector layer before filtering for geometry type
-                if isinstance(layer, QgsVectorLayer):
-                    # Filter layers based on the specified layer_type
-                    if layer_type == "all" or \
-                            (layer_type == "points" and layer.geometryType() == QgsWkbTypes.PointGeometry) or \
-                            (layer_type == "polygons" and layer.geometryType() == QgsWkbTypes.PolygonGeometry):
-                        layers.append(layer)
-            elif isinstance(node, QgsLayerTreeGroup):
-                # If the node is a group, recursively get layers from the group
-                layers.extend(self.get_layers(node, layer_type))
-
-        return layers
-
-    def load_layers_in_combobox(self):
-        # Fetch the currently loaded layers including those in groups
-        root = QgsProject.instance().layerTreeRoot()
-        all_layers = self.get_layers(root, "all")
-        # Clear the contents of the comboBox from previous runs
-        self.dlg.cb_layer_symbology.clear()
-        # Populate the comboBox with names of the specified type of layers
-        self.dlg.cb_layer_symbology.addItems([layer.name() for layer in all_layers])
-
-    """
-    Request: temporary layer"""
-
-    def determine_qvariant_type(self, dtype):
-        if pd.api.types.is_integer_dtype(dtype):
-            return QVariant.Int
-        elif pd.api.types.is_float_dtype(dtype):
-            return QVariant.Double
-        elif pd.api.types.is_object_dtype(dtype):
-            return QVariant.String
-        elif pd.api.types.is_bool_dtype(dtype):
-            return QVariant.Bool
-        elif pd.api.types.is_datetime64_any_dtype(dtype):
-            return QVariant.DateTime
-        elif pd.api.types.is_timedelta64_dtype(dtype):
-            return QVariant.Time
-        else:
-            return QVariant.String
-
-
-    """   
-    end of ChatGPT code
-    """
-
 
     def not_implemented_yet(self):
         self.iface.messageBar().pushMessage("This function is optional and not implemented yet")
-
-
-
 
     """
     Run is the method, which connects GUI elements to methods and is running, while the plugin is open
@@ -1078,31 +1072,20 @@ class TransitReachabilityAnalyser:
         if self.first_start == True:
             self.first_start = False
             self.dlg = TransitReachabilityAnalyserDialog()
+            #preparation buttons
+            self.dlg.pb_calculate_walk_distance.clicked.connect(self.setText_distance_field)
             self.dlg.pb_start_check_OTP.clicked.connect(self.check_grizzly_server_is_running)
-            self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
             self.dlg.pb_open_explorer_itineraries.clicked.connect(lambda: self.select_output_file("itineraries"))
+            #calculation buttons
+            self.dlg.pb_get_stops_from_otp.clicked.connect(self.stops_with_departure_times_from_otp_to_gpkg)
             self.dlg.pb_get_stations_from_otp.clicked.connect(self.stations_from_otp_to_gpkg)
             self.dlg.pb_start_to_all_stations.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("start"))
-            #self.dlg.pb_all_stations_to_end.clicked.connect(lambda: self.itineraries_data_from_otp_to_geopackage("end"))
-            self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
+            #symbology buttons
             self.dlg.pb_reload_layer_cb.clicked.connect(self.load_layers_in_combobox)
-            self.dlg.pb_calculate_walk_distance.clicked.connect(self.setText_distance_field)
-
-
+            self.dlg.pb_set_symbology.clicked.connect(self.set_default_symbology)
 
         self.load_layers_in_combobox()
-
-        # # Fetch the currently loaded layers
-        # layers = QgsProject.instance().layerTreeRoot().children() #Attention this can't go into a layer group
-        # # Clear the contents of the comboBox from previous runs
-        # self.dlg.cb_layer_symbology.clear()
-        # # Populate the comboBox with names of all the loaded layers
-        # self.dlg.cb_layer_symbology.addItems([layer.name() for layer in layers])
-
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
         result = self.dlg.exec_()
-        # See if OK was pressed
-        # if result:
-        #     self.iface.messageBar().pushMessage("Until next time")
