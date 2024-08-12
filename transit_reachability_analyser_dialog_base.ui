@@ -58,7 +58,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>2.0km/h (e.g. Mobility aid users)</string>
+             <string>2.1km/h (e.g. Mobility aid users)</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walkspeed</string>
@@ -71,7 +71,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>3.5km/h (average speed &gt; 65 y/o)</string>
+             <string>3.0km/h (average speed &gt; 65 y/o)</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walkspeed</string>
@@ -126,7 +126,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>personalised:</string>
+             <string>personalized:</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walkspeed</string>
@@ -322,7 +322,7 @@
              <locale language="English" country="UnitedKingdom"/>
             </property>
             <property name="text">
-             <string>personalised:</string>
+             <string>personalized:</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">rb_group_walktime</string>
@@ -1032,8 +1032,8 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="rb_group_walktime"/>
   <buttongroup name="rb_group_otp_server"/>
+  <buttongroup name="rb_group_walktime"/>
   <buttongroup name="rb_group_walkspeed"/>
  </buttongroups>
 </ui>

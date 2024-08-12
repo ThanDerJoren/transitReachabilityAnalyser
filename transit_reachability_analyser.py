@@ -230,9 +230,9 @@ class TransitReachabilityAnalyser:
 
     def get_walk_speed(self):
         if self.dlg.rb_2kmh.isChecked():
-            walk_speed = 2 / 3.6
+            walk_speed = 2.1 / 3.6
         elif self.dlg.rb_3_5kmh.isChecked():
-            walk_speed = 3.5 / 3.6
+            walk_speed = 3.0 / 3.6
         elif self.dlg.rb_4_5kmh.isChecked():
             walk_speed = 4.5 / 3.6
         elif self.dlg.rb_5_5kmh.isChecked():
@@ -499,7 +499,7 @@ class TransitReachabilityAnalyser:
                 "name": name_collection,
                 "travel_time[min]": trip_time_collection,
                 "travel_time_ratio": travel_time_ratio_collection,
-                "itinerary_frequency_[min]": itinerary_frequency_collection,
+                "frequency_[min]": itinerary_frequency_collection,
                 "walk_time_[min]": walktime_to_first_stop_collection,
                 "walk_distance_[m]": meters_to_first_stop_collection,
                 "number_of_transfers": number_of_transfers_collection,
@@ -1010,7 +1010,7 @@ class TransitReachabilityAnalyser:
             target_field = "travel_time_ratio"
             range_list = self.get_travel_time_ratio_rendererRange(layer)
         elif symbology_theme == 2:
-            target_field = "itinerary_frequency_[min]"
+            target_field = "frequency_[min]"
             range_list = self.get_frequency_rendererRange(layer)
         elif symbology_theme == 3:
             target_field = "walk_time_[min]"
