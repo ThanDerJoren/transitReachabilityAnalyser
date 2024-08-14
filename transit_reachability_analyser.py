@@ -510,9 +510,9 @@ class TransitReachabilityAnalyser:
                 "date": date_collection,
                 "time_start": time_start_collection,
                 "time_end": time_end_collection,
-                "walk_speed_in_km/h": walk_speed_collection,
-                "max_walking_time_in_min": max_walking_time_collection,
-                "catchment_area": catchment_area_collection,
+                "walk_speed_[km/h]": walk_speed_collection,
+                "max_walking_time_[min]": max_walking_time_collection,
+                "catchment_area_[m]": catchment_area_collection,
                 "first_possible_stops": first_possible_stops_collection,
             }
         )
@@ -575,9 +575,9 @@ class TransitReachabilityAnalyser:
                 "date": date_collection,
                 "time_start": time_start_collection,
                 "time_end": time_end_collection,
-                "walk_speed_in_km/h": walk_speed_collection,
-                "max_walking_time_in_min": max_walking_time_collection,
-                "catchment_area": catchment_area_collection
+                "walk_speed_[km/h]": walk_speed_collection,
+                "max_walking_time_[min]": max_walking_time_collection,
+                "catchment_area_[m]": catchment_area_collection
             }
         )
         return df
@@ -642,7 +642,7 @@ class TransitReachabilityAnalyser:
 
     def add_rendererRange_for_particular_points(self, layer, range_list:list):
         # not reachable stations
-        label = "Station not reachable"
+        label = "no itinerary found"
         lower_limit = -1
         upper_limit = -1
         symbol = self.set_symbol_point_or_polygon(layer)
@@ -652,7 +652,7 @@ class TransitReachabilityAnalyser:
         range_list.append(range)
 
         # start/end point
-        label = "Start"
+        label = "start"
         lower_limit = -2
         upper_limit = -2
         if QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
@@ -969,7 +969,7 @@ class TransitReachabilityAnalyser:
                 # In this way you can check if the code work with shorter runtime
                 # If you choose only one station you have to make a list again, so that some methods can iterate over
                     # the element
-                selected_stations = all_stations #[488]
+                selected_stations = all_stations #[451] # delete number
                 if not isinstance(selected_stations, list):
                     selected_stations = [selected_stations]
                 # query and filter the Itineraries
