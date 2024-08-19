@@ -1,5 +1,6 @@
-# Guide (Translated from German by ChatGPT)
+# Guide
 > **Hinweis:** [Die Anleitung auf Deutsch](#anleitung) ist weiter unten zu finden.
+> **Note:** Translated from German by ChatGPT
 
 With the *Transit Reachability Analyser* plugin, public transport reachability can be calculated and visualized. Starting from a given point, the fastest route to each station in the public transport network is calculated using OpenTripPlanner (OTP). As a result, a dataset is created in which each station is represented as a point on the map. In QGIS, a dataset consisting of points is referred to as a point layer. Various information is provided for each station, including travel effort indicators such as travel time, travel time ratio, walking time, and walking distance to the first stop, as well as transfer frequency. Additionally, it indicates which public transport connections were identified for the station and which one was selected. Information in QGIS is referred to as attributes and can be displayed via the attribute table of the point layer.
 
