@@ -27,7 +27,7 @@ Auszug aus der Attributtabelle: Strecke Hauptbahnhof - Dedekindstraße:
 
 # Kurzanleitung
 
-1. [GTFS-Feed vorbereiten](#GTFS-Feed vorbereiten)
+1. [GTFS-Feed vorbereiten](#GTFS-Feed-vorbereiten)
    1. GTFS-Feed herunterladen. Zum Beispiel von [DELFI e.V.](https://www.opendata-oepnv.de/ht/de/organisation/delfi/startseite?tx_vrrkit_view%5Baction%5D=details&tx_vrrkit_view%5Bcontroller%5D=View&tx_vrrkit_view%5Bdataset_formats%5D%5B0%5D=ZIP&tx_vrrkit_view%5Bdataset_name%5D=deutschlandweite-sollfahrplandaten-gtfs&cHash=01414d5793fcd0abb0f3a2e35176752c) oder [Connect](https://connect-fahrplanauskunft.de/datenbereitstellung/).
    2. GTFS-Feed filtern mithilfe von [gtfstools](https://ipeagit.github.io/gtfstools/).
 
