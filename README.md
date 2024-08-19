@@ -27,23 +27,23 @@ Auszug aus der Attributtabelle: Strecke Hauptbahnhof - Dedekindstraße:
 
 # Kurzanleitung
 
-1. [GTFS-Feed vorbereiten](##GTFS-Feed vorbereiten)
-   1. GTFS-Feed herunterladen. Zum Beispiel von [DELFI e.V.](https://www.opendata-oepnv.de/ht/de/organisation/delfi/startseite?tx_vrrkit_view%5Baction%5D=details&tx_vrrkit_view%5Bcontroller%5D=View&tx_vrrkit_view%5Bdataset_formats%5D%5B0%5D=ZIP&tx_vrrkit_view%5Bdataset_name%5D=deutschlandweite-sollfahrplandaten-gtfs&cHash=01414d5793fcd0abb0f3a2e35176752c) oder [Connect](https://connect-fahrplanauskunft.de/datenbereitstellung/).
-   2. GTFS-Feed filtern mithilfe von [gtfstools](https://ipeagit.github.io/gtfstools/).
+1. GTFS-Feed vorbereiten ([Details](#GTFS-Feed-vorbereiten))
+   1.  GTFS-Feed herunterladen. Zum Beispiel von [DELFI e.V.](https://www.opendata-oepnv.de/ht/de/organisation/delfi/startseite?tx_vrrkit_view%5Baction%5D=details&tx_vrrkit_view%5Bcontroller%5D=View&tx_vrrkit_view%5Bdataset_formats%5D%5B0%5D=ZIP&tx_vrrkit_view%5Bdataset_name%5D=deutschlandweite-sollfahrplandaten-gtfs&cHash=01414d5793fcd0abb0f3a2e35176752c) oder [Connect](https://connect-fahrplanauskunft.de/datenbereitstellung/) ([Details](#GTFS-Feed-herunterladen)).
+   2. GTFS-Feed filtern mithilfe von [gtfstools](https://ipeagit.github.io/gtfstools/) ([Details](#GTFS-Feed-filtern)).
 
-2. Eine .osm.pbf-Datei bei [Protomaps](https://app.protomaps.com/) herunterladen, die dem Gebiet des GTFS-Feeds entspricht.
+2. Eine .osm.pbf-Datei bei [Protomaps](https://app.protomaps.com/) herunterladen, die dem Gebiet des GTFS-Feeds entspricht ([Details](#.osm.pbf-Datei-herunterladen)).
 
-3. [OpenTripPlanner 2.5](https://docs.opentripplanner.org/en/latest/Basic-Tutorial/) über das Terminal starten.
+3. [OpenTripPlanner 2.5](https://docs.opentripplanner.org/en/latest/Basic-Tutorial/) über das Terminal starten ([Details](#OTP-starten)).
 
 4. *Transit Reachability Analyser* installieren und öffnen.
-   1. Erreichbarkeitsanalyse
+   1. Erreichbarkeitsanalyse ([Details](#Erreichbarkeitsanalyse))
       1. Koordinaten des Startpunktes angeben.
       2. Untersuchungstag und -zeitraum festlegen.
       3. Gehgeschwindigkeit und maximale Gehzeit wählen.
       4. Speicherort für den Punktlayer festlegen.
       5. Berechnung durch Button *Reachability Analysis* starten.
-   2. Optional: Isochronenlayer oder Gebäudelayer mit Attributwerten erstellen.
-   3. Symbolisierung der Daten
+   2. Optional: Isochronenlayer oder Gebäudelayer mit Attributwerten erstellen ([Details](#Isochronenlayer-symbolisieren)).
+   3. Symbolisierung der Daten ([Details](#Isochronenlayer-symbolisieren))
       1. Hierfür wird der OTP-Server nicht benötigt.
       2. Layer wählen (Punkt- oder Polygonlayer möglich).
       3. Darzustellenden Indikator festlegen.
