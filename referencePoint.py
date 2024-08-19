@@ -117,7 +117,6 @@ class ReferencePoint:
     def search_window(self, search_window):
         try:
             self.__search_window = int(search_window)
-            print(self.__search_window)
         except ValueError:
             self.__incorrect_input = True
             self.__error_message += "The search window text field has to contain only numbers" + "\n"
@@ -163,7 +162,6 @@ class ReferencePoint:
         diff = datetime.combine(self.day, self.time_end) - datetime.combine(self.day, self.time_start)
         diff = diff.total_seconds()
         if diff >= 0:
-            print(f"diff: {diff}")
             return diff
 
         else:

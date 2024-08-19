@@ -299,7 +299,6 @@ class TransitReachabilityAnalyser:
             }}
             }}
             """
-        print(plan)
         if self.check_grizzly_server_is_running():
             url = self.get_request_url()
             queried_stops = requests.post(url, json={"query": plan})
@@ -376,7 +375,6 @@ class TransitReachabilityAnalyser:
                         all_routes.append(route)
             new_stop = Stop(stop["name"], stop["gtfsId"], stop["lat"], stop["lon"], stop["vehicleMode"], route_objects)
             stop_objects.append(new_stop)
-        print(f"length of all_routes list: {len(all_routes)}")
         return stop_objects, all_routes
 
     def create_stations(self, stop_collection):
@@ -630,11 +628,9 @@ class TransitReachabilityAnalyser:
     def set_symbol_point_or_polygon(self, layer):
         if layer.geometryType() == QgsWkbTypes.PolygonGeometry:
             symbol = QgsFillSymbol.createSimple({'color': '#9b9b9b', 'outline_style': 'no'})
-            print(type(symbol))
             return symbol
         elif QgsSymbol.defaultSymbol(layer.geometryType()) == QgsMarkerSymbol:
             symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-            print(type(symbol))
             return symbol
         else:
 
@@ -802,7 +798,7 @@ class TransitReachabilityAnalyser:
         color_ramp = style.colorRamp(ramp_name)
 
         if not color_ramp:
-            print(f"Error: Color ramp '{ramp_name}' not found.")
+            self.iface.messageBar().pushMessage(f"Error: Color ramp '{ramp_name}' not found.")
             return
         else:
             # Create a list to store the hex codes
@@ -890,12 +886,10 @@ class TransitReachabilityAnalyser:
     def check_grizzly_server_is_running(self):
         if self.dlg.rb_otp_manually_started_8080.isChecked():
             url = "http://localhost:8080/"
-            print(url)
         elif self.dlg.rb_otp_manually_started_changed_port.isChecked():
             if self.dlg.le_port_number.text() != "":
                 port_number = self.dlg.le_port_number.text()
                 url = f"http://localhost:{port_number}/"
-                print(f"request url: {url}")
             else:
                 self.iface.messageBar().pushMessage("You have to enter a port number for OTP")
         else:
