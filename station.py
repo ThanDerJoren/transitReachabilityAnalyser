@@ -143,12 +143,23 @@ class Station:
                     route_numbers.append(item["mode"])
                 #frequency of every leg
                 if item["nextLegs"] is not None:
-                    first_departure = datetime.fromtimestamp(item["startTime"]/1000.0)  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
-                    next_legs = item["nextLegs"]
-                    average_frequency = self.calculate_average_frequency(first_departure,next_legs)
-                    all_frequencies.append(average_frequency)
-                else:
+                    if len(item["nextLegs"]) > 2:
+                        first_departure = datetime.fromtimestamp(item["startTime"]/1000.0)  #Unix timestamp in milliseconds to datetime. /1000.0 beacause of milliseconds
+                        next_legs = item["nextLegs"]
+                        average_frequency = self.calculate_average_frequency(first_departure,next_legs)
+                        all_frequencies.append(average_frequency)
+
+                    else: #in case there is less then 3 next legs
+                        first_departure = datetime.fromtimestamp(item["startTime"] / 1000.0)
+                        next_departure = datetime.fromtimestamp(item["nextLegs"][0]["startTime"] / 1000.0)
+                        frequency = next_departure - first_departure
+                        frequency = round(frequency.total_seconds() / 60, 1)
+                        all_frequencies.append(frequency)
+                elif item["mode"] == "WALK":
                     all_frequencies.append(0.5)  # you can start to walk every half minute
+                else:
+                    all_frequencies.append(720) # transit, with no next leg, maybe the last of the day
+
             # worst frequency of the legs defines the frequency of the whole itinerary
             worst_frequency = all_frequencies[0]
             for frequency in all_frequencies:

@@ -969,7 +969,7 @@ class TransitReachabilityAnalyser:
                 # In this way you can check if the code work with shorter runtime
                 # If you choose only one station you have to make a list again, so that some methods can iterate over
                     # the element
-                selected_stations = all_stations #[451] # delete number
+                selected_stations = all_stations #[400:403] # delete number
                 if not isinstance(selected_stations, list):
                     selected_stations = [selected_stations]
                 # query and filter the Itineraries
